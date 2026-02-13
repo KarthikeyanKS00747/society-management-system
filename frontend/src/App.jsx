@@ -22,29 +22,30 @@ import Facilities from "./pages/Facilities";
 import NotFound from "./pages/NotFound";
 
 function App() {
+  // Check if user is logged in (from localStorage or auth context)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [role, setRole] = useState("resident");
   const [loading, setLoading] = useState(true);
 
+  // Check authentication status on app load
   useEffect(() => {
-    // Create a function to handle auth check
     const checkAuth = () => {
+      // Check if token exists in localStorage
       const token = localStorage.getItem("authToken");
       const userData = localStorage.getItem("user");
-    
+      
       if (token && userData) {
-        // Set both states at once to minimize renders
         setIsLoggedIn(true);
         const user = JSON.parse(userData);
         setRole(user.role || "resident");
       }
       setLoading(false);
     };
-  
+    
     checkAuth();
   }, []);
 
-  // Handle login (to be called from Login page)
+  // Handle login
   const handleLogin = (token, userData) => {
     localStorage.setItem("authToken", token);
     localStorage.setItem("user", JSON.stringify(userData));
@@ -52,7 +53,7 @@ function App() {
     setRole(userData.role || "resident");
   };
 
-  // Handle logout (to be called from Layout)
+  // Handle logout
   const handleLogout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
@@ -60,13 +61,17 @@ function App() {
     setRole("resident");
   };
 
-  // Loading state
+  // Show loading spinner while checking auth
   if (loading) {
     return (
-      <div className="auth-page">
-        <div className="card auth-card">
-          <div className="auth-title">Loading...</div>
-        </div>
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "center", 
+        alignItems: "center", 
+        height: "100vh",
+        background: "var(--bg-main)"
+      }}>
+        <div style={{ color: "var(--text-muted)" }}>Loading...</div>
       </div>
     );
   }
@@ -74,19 +79,15 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Redirect root to login or dashboard based on auth */}
+        {/* CHANGED: Always go to login first, never to dashboard */}
         <Route
           path="/"
-          element={
-            isLoggedIn ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-          }
+          element={<Navigate to="/login" />}
         />
 
-        {/* Public routes */}
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* Protected routes - only if logged in */}
         {isLoggedIn ? (
           <Route element={<Layout role={role} onLogout={handleLogout} />}>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -103,11 +104,10 @@ function App() {
             <Route path="/facilities" element={<Facilities />} />
           </Route>
         ) : (
-          // If not logged in, protect all dashboard routes
-          <Route path="/*" element={<Navigate to="/login" />} />
+          // Redirect protected routes to login
+          <Route path="*" element={<Navigate to="/login" />} />
         )}
 
-        {/* 404 page */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
