@@ -17,7 +17,7 @@ function Login({ onLogin }) {
       const fakeToken = "fake-jwt-token-" + Date.now();
       const fakeUser = {
         id: 1,
-        name: isAdminLogin ? "Admin User" : "Demo Resident",
+        name: isAdminLogin ? "Admin User" : "Resident User",
         email: email,
         role: isAdminLogin ? "admin" : "resident"
       };
