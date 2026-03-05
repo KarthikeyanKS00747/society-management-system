@@ -31,7 +31,7 @@ function App() {
   // Rehydrate auth state from localStorage on first render
   useEffect(() => { init(); }, []);
 
-  const role = user?.role ?? "resident";
+  const role = (user?.role ?? "resident").toLowerCase();
 
   return (
     <BrowserRouter>

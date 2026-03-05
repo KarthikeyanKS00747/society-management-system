@@ -6,7 +6,7 @@ import { useApplicationStore } from "../viewmodels/useApplicationStore";
 function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.role?.toLowerCase() === "admin";
 
   const { applications, fetchApplications } = useApplicationStore();
 

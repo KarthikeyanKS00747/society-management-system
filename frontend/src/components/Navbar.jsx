@@ -11,7 +11,7 @@ import applicationsIcon from "../assets/icons/applications.svg";
 function Navbar({ onMenuClick }) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.role?.toLowerCase() === "admin";
   const pendingCount = useApplicationStore((s) => s.applications.length);
 
   const handleLogout = async () => {

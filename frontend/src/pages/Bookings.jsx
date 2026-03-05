@@ -37,7 +37,7 @@ function Bookings() {
     if (userData) {
       try {
         const user = JSON.parse(userData);
-        userRole = user.role || "resident";
+        userRole = (user.role || "resident").toLowerCase();
       } catch (error) {
         console.error("Error parsing user data:", error);
       }

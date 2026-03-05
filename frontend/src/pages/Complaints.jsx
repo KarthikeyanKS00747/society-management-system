@@ -39,7 +39,7 @@ function Complaints() {
     if (userData) {
       try {
         const user = JSON.parse(userData);
-        setUserRole(user.role || "resident");
+        setUserRole((user.role || "resident").toLowerCase());
       } catch (error) {
         console.error("Error parsing user data:", error);
       }

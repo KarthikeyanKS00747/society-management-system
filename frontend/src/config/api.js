@@ -15,4 +15,15 @@ export const API_ENDPOINTS = {
     accept: (id) =>   `${BASE_URL}/resiflow/auth/applications/${id}/accept`,
     reject: (id) =>   `${BASE_URL}/resiflow/auth/applications/${id}/reject`,
   },
+  profile: {
+    get:              `${BASE_URL}/resiflow/profile`,
+    update:           `${BASE_URL}/resiflow/profile`,
+  },
+  flats: {
+    list:                   `${BASE_URL}/resiflow/flats`,
+    create:                 `${BASE_URL}/resiflow/flats`,
+    unassignedResidents:    `${BASE_URL}/resiflow/flats/unassigned-residents`,
+    assign:   (flatId) =>   `${BASE_URL}/resiflow/flats/${flatId}/assign`,
+    unassign: (flatId) =>   `${BASE_URL}/resiflow/flats/${flatId}/unassign`,
+  },
 };

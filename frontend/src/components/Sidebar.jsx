@@ -47,6 +47,10 @@ function Sidebar({ role = "resident" }) {
               Applications
             </NavLink>
 
+            <NavLink to="/flats" className="nav-item">
+              Flat Management
+            </NavLink>
+
             <NavLink to="/users" className="nav-item">
               Users
             </NavLink>
