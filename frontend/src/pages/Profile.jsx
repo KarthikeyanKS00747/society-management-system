@@ -1,82 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../viewmodels/useAuthStore";
 
-function Profile({ onLogout }) {
+function Profile() {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
+
   const [isEditing, setIsEditing] = useState(false);
-  const [role, setRole] = useState("resident");
+
+  // Seed display data from the JWT payload (id, role, societyId).
+  // Fields not in the JWT (phone, flat, etc.) will be populated
+  // once a GET /profile endpoint is wired up.
   const [userData, setUserData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    flat: "",
-    role: "",
-    memberSince: "",
-    emergencyContact: ""
-  });
-  
-  // Form state for editing
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    emergencyContact: ""
+    name:             user?.name  ?? "",
+    email:            user?.email ?? "",
+    phone:            user?.phone ?? "",
+    flat:             user?.flat  ?? "",
+    role:             user?.role  ?? "",
+    memberSince:      "",
+    emergencyContact: "",
   });
 
-  // Get user role and data from localStorage
-  useEffect(() => {
-    const userDataFromStorage = localStorage.getItem("user");
-    let userRole = "resident";
-    let user = {};
-    
-    if (userDataFromStorage) {
-      try {
-        user = JSON.parse(userDataFromStorage);
-        userRole = user.role || "resident";
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
-    }
-    
-    setRole(userRole);
-    
-    // Set user data based on role
-    if (userRole === "admin") {
-      const adminData = {
-        name: user.name || "Admin User",
-        email: user.email || "admin@society.com",
-        phone: user.phone || "9876543210",
-        flat: "Admin Office",
-        role: "Administrator",
-        memberSince: user.memberSince || "Jan 2023",
-        emergencyContact: user.emergencyContact || "9876543211"
-      };
-      setUserData(adminData);
-      setFormData({
-        name: adminData.name,
-        email: adminData.email,
-        phone: adminData.phone,
-        emergencyContact: adminData.emergencyContact
-      });
-    } else {
-      const residentData = {
-        name: user.name || "Rajesh Kumar",
-        email: user.email || "rajesh@example.com",
-        phone: user.phone || "9876543210",
-        flat: user.flat || "A-101",
-        role: "Resident",
-        memberSince: user.memberSince || "Jan 2023",
-        emergencyContact: user.emergencyContact || "9876543211"
-      };
-      setUserData(residentData);
-      setFormData({
-        name: residentData.name,
-        email: residentData.email,
-        phone: residentData.phone,
-        emergencyContact: residentData.emergencyContact
-      });
-    }
-  }, []);
+  const [formData, setFormData] = useState({
+    name:             userData.name,
+    email:            userData.email,
+    phone:            userData.phone,
+    emergencyContact: userData.emergencyContact,
+  });
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -102,61 +52,24 @@ function Profile({ onLogout }) {
   };
 
   const handleSaveClick = () => {
-    // Validate inputs
-    if (!formData.name.trim()) {
-      alert("Name cannot be empty");
-      return;
-    }
-    if (!formData.email.trim()) {
-      alert("Email cannot be empty");
-      return;
-    }
-    if (!formData.phone.trim()) {
-      alert("Phone number cannot be empty");
-      return;
-    }
+    if (!formData.name.trim()) { alert("Name cannot be empty"); return; }
+    if (!formData.email.trim()) { alert("Email cannot be empty"); return; }
+    if (!formData.phone.trim()) { alert("Phone number cannot be empty"); return; }
 
-    // Update user data
-    setUserData(prev => ({
-      ...prev,
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      emergencyContact: formData.emergencyContact
-    }));
-
-    // Update localStorage
-    const userFromStorage = localStorage.getItem("user");
-    if (userFromStorage) {
-      try {
-        const user = JSON.parse(userFromStorage);
-        const updatedUser = {
-          ...user,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          emergencyContact: formData.emergencyContact
-        };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-      } catch (error) {
-        console.error("Error updating user data:", error);
-      }
-    }
-
+    // Update local display state only.
+    // TODO: wire up PUT /profile endpoint via ProfileService + store.
+    setUserData((prev) => ({ ...prev, ...formData }));
     setIsEditing(false);
     alert("Profile updated successfully!");
   };
 
-  const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    }
-    navigate("/login");
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
   };
 
   return (
     <div className="page">
-      {/* Page Header with Logout Button */}
       <section className="page-header dashboard-header">
         <div>
           <h1>My Profile</h1>
@@ -167,7 +80,7 @@ function Profile({ onLogout }) {
           <button className="btn btn-outline" onClick={() => navigate("/dashboard")}>
             Back to Dashboard
           </button>
-          <button className="btn btn-danger" onClick={handleLogout}>
+          <button className="btn btn-outline btn-sm" onClick={handleLogout}>
             Logout
           </button>
         </div>

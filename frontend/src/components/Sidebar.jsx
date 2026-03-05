@@ -43,6 +43,10 @@ function Sidebar({ role = "resident" }) {
 
         {role === "admin" && (
           <>
+            <NavLink to="/applications" className="nav-item">
+              Applications
+            </NavLink>
+
             <NavLink to="/users" className="nav-item">
               Users
             </NavLink>

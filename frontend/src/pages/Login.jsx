@@ -1,44 +1,53 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../viewmodels/useAuthStore";
 
-function Login({ onLogin }) {
+function Login() {
   const navigate = useNavigate();
+  const { login, loading, error, isLoggedIn, clearError } = useAuthStore();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e) => {
+  // Redirect once authenticated
+  useEffect(() => {
+    if (isLoggedIn) navigate("/dashboard", { replace: true });
+  }, [isLoggedIn, navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // For demo - check if it's admin login
-    const isAdminLogin = email === "admin@society.com" && password === "admin123#";
-    const isResidentLogin = email === "resident@example.com" && password === "resident123#";
-    
-    if (isAdminLogin || isResidentLogin) {
-      const fakeToken = "fake-jwt-token-" + Date.now();
-      const fakeUser = {
-        id: 1,
-        name: isAdminLogin ? "Admin User" : "Resident User",
-        email: email,
-        role: isAdminLogin ? "admin" : "resident"
-      };
-      
-      // Call the onLogin function from App.jsx
-      if (onLogin) {
-        onLogin(fakeToken, fakeUser);
-      }
-      
-      // Redirect to dashboard
-      navigate("/dashboard");
-    } else {
-      // Show error message for invalid credentials
-      alert("Invalid email or password. Please try again.");
-    }
+    await login(email, password);
   };
 
   return (
     <div className="auth-page">
       <div className="card auth-card">
         <h2 className="auth-title">Login</h2>
+
+        {error && (
+          <div
+            className="auth-error"
+            style={{
+              background: "var(--danger-light, #fdecea)",
+              color: "var(--danger, #d32f2f)",
+              padding: "10px 14px",
+              borderRadius: "8px",
+              marginBottom: "12px",
+              fontSize: "0.9rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span>{error}</span>
+            <span
+              onClick={clearError}
+              style={{ cursor: "pointer", fontWeight: "bold", marginLeft: "12px" }}
+            >
+              ✕
+            </span>
+          </div>
+        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <input
@@ -48,6 +57,7 @@ function Login({ onLogin }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={loading}
           />
 
           <input
@@ -57,25 +67,39 @@ function Login({ onLogin }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={loading}
           />
 
-          <button type="submit" className="btn btn-primary btn-full">
-            Login
+          <button
+            type="submit"
+            className="btn btn-primary btn-full"
+            disabled={loading}
+          >
+            {loading ? "Signing in…" : "Login"}
           </button>
         </form>
 
         <div style={{ textAlign: "center", marginTop: "20px" }}>
           <p style={{ color: "var(--text-muted)" }}>
-            New user?{" "}
-            <span 
+            New society?{" "}
+            <span
               onClick={() => navigate("/signup")}
-              style={{ 
-                color: "var(--primary)", 
+              style={{
+                color: "var(--primary)",
                 textDecoration: "none",
-                cursor: "pointer"
+                cursor: "pointer",
               }}
             >
-              Sign up here
+              Register here
+            </span>
+          </p>
+          <p style={{ color: "var(--text-muted)", marginTop: "8px" }}>
+            Resident applying to join?{" "}
+            <span
+              onClick={() => navigate("/apply")}
+              style={{ color: "var(--primary)", cursor: "pointer" }}
+            >
+              Submit application
             </span>
           </p>
         </div>

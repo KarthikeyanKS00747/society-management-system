@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+
+import { useAuthStore } from "./viewmodels/useAuthStore";
 
 import Layout from "./components/Layout";
 
@@ -19,77 +21,29 @@ import Users from "./pages/Users";
 import Flats from "./pages/Flats";
 import Facilities from "./pages/Facilities";
 
+import Applications from "./pages/Applications";
+import Apply from "./pages/Apply";
 import NotFound from "./pages/NotFound";
 
 function App() {
-  // Check if user is logged in (from localStorage or auth context)
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [role, setRole] = useState("resident");
-  const [loading, setLoading] = useState(true);
+  const { init, isLoggedIn, user, logout } = useAuthStore();
 
-  // Check authentication status on app load
-  useEffect(() => {
-    const checkAuth = () => {
-      // Check if token exists in localStorage
-      const token = localStorage.getItem("authToken");
-      const userData = localStorage.getItem("user");
-      
-      if (token && userData) {
-        setIsLoggedIn(true);
-        const user = JSON.parse(userData);
-        setRole(user.role || "resident");
-      }
-      setLoading(false);
-    };
-    
-    checkAuth();
-  }, []);
+  // Rehydrate auth state from localStorage on first render
+  useEffect(() => { init(); }, []);
 
-  // Handle login
-  const handleLogin = (token, userData) => {
-    localStorage.setItem("authToken", token);
-    localStorage.setItem("user", JSON.stringify(userData));
-    setIsLoggedIn(true);
-    setRole(userData.role || "resident");
-  };
-
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
-    setRole("resident");
-  };
-
-  // Show loading spinner while checking auth
-  if (loading) {
-    return (
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        alignItems: "center", 
-        height: "100vh",
-        background: "var(--bg-main)"
-      }}>
-        <div style={{ color: "var(--text-muted)" }}>Loading...</div>
-      </div>
-    );
-  }
+  const role = user?.role ?? "resident";
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* CHANGED: Always go to login first, never to dashboard */}
-        <Route
-          path="/"
-          element={<Navigate to="/login" />}
-        />
+        <Route path="/" element={<Navigate to="/login" />} />
 
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/apply" element={<Apply />} />
 
         {isLoggedIn ? (
-          <Route element={<Layout role={role} onLogout={handleLogout} />}>
+          <Route element={<Layout role={role} onLogout={logout} />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/announcements" element={<Announcements />} />
@@ -99,12 +53,13 @@ function App() {
             <Route path="/complaints" element={<Complaints />} />
             <Route path="/bookings" element={<Bookings />} />
 
+            <Route path="/applications" element={<Applications />} />
+
             <Route path="/users" element={<Users />} />
             <Route path="/flats" element={<Flats />} />
             <Route path="/facilities" element={<Facilities />} />
           </Route>
         ) : (
-          // Redirect protected routes to login
           <Route path="*" element={<Navigate to="/login" />} />
         )}
 
