@@ -32,4 +32,15 @@ export const API_ENDPOINTS = {
     list:   `${BASE_URL}/resiflow/announcements`,
     create: `${BASE_URL}/resiflow/announcements`,
   },
+  complaints: {
+    list:               `${BASE_URL}/resiflow/complaints`,
+    create:             `${BASE_URL}/resiflow/complaints`,
+    updateStatus: (id) => `${BASE_URL}/resiflow/complaints/${id}/status`,
+  },
+  facilities: {
+    list:             `${BASE_URL}/resiflow/facilities`,
+    create:           `${BASE_URL}/resiflow/facilities`,
+    update: (id) =>   `${BASE_URL}/resiflow/facilities/${id}`,
+    delete: (id) =>   `${BASE_URL}/resiflow/facilities/${id}`,
+  },
 };

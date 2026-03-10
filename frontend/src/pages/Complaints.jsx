@@ -1,102 +1,59 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+﻿import { useEffect, useState } from "react";
+import { useAuthStore } from "../viewmodels/useAuthStore";
+import { useComplaintStore } from "../viewmodels/useComplaintStore";
+
+const STATUS_LABEL = { OPEN: "Open", IN_PROGRESS: "In Progress", RESOLVED: "Resolved" };
+const STATUS_COLOR = { OPEN: "#e53e3e", IN_PROGRESS: "#d97706", RESOLVED: "green" };
+
+const CATEGORIES = [
+  "Plumbing", "Electrical", "Security", "Cleaning",
+  "Parking", "Noise", "Pest Control", "Others",
+];
+
+const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : "—");
 
 function Complaints() {
-  const navigate = useNavigate();
-  
-  // Add this - get role from localStorage
-  const [userRole, setUserRole] = useState("resident");
-  
-  const [complaints, setComplaints] = useState([
-    { 
-      id: 1, 
-      title: "Main Gate Light", 
-      description: "The street light near the main gate is flickering since last night.",
-      category: "electrical",
-      status: "In Progress", 
-      date: "2024-03-01" 
-    },
-    { 
-      id: 2, 
-      title: "Kitchen Sink Leak", 
-      description: "The plumbing team fixed the leakage in Flat C-405.",
-      category: "plumbing",
-      status: "Resolved", 
-      date: "2024-02-28" 
-    }
-  ]);
+  const { user } = useAuthStore();
+  const role = (user?.role ?? "resident").toLowerCase();
+  const userId = user?.id ?? user?._id;
 
-  const [formData, setFormData] = useState({
-    category: "",
-    description: ""
-  });
+  const { complaints, loading, saving, error, fetchComplaints, createComplaint, updateStatus, clearError } =
+    useComplaintStore();
 
-  const [showOtherInput, setShowOtherInput] = useState(false);
+  const [form, setForm] = useState({ category: "", customCategory: "", description: "", priority: "" });
+  const [showCustom, setShowCustom] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Add useEffect to get role from localStorage
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        setUserRole((user.role || "resident").toLowerCase());
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
-    }
+    fetchComplaints();
   }, []);
 
-  const handleInputChange = (e) => {
+  const visible =
+    role === "admin"
+      ? complaints
+      : complaints.filter((c) => c.userId === userId || c.userId?._id === userId);
+
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-
-    if (name === "category" && value === "others") {
-      setShowOtherInput(true);
-    } else if (name === "category" && value !== "others") {
-      setShowOtherInput(false);
-    }
+    setForm((f) => ({ ...f, [name]: value }));
+    if (name === "category") setShowCustom(value === "Others");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    let finalCategory = formData.category;
-    if (formData.category === "others" && formData.customCategory) {
-      finalCategory = formData.customCategory;
-    }
-
-    const newComplaint = {
-      id: complaints.length + 1,
-      title: "New Complaint",
-      description: formData.description,
-      category: finalCategory,
-      status: "In Progress",
-      date: new Date().toISOString().split('T')[0]
-    };
-
-    setComplaints([newComplaint, ...complaints]);
-    
-    setFormData({
-      category: "",
-      description: "",
-      customCategory: ""
+    const category = form.category === "Others" ? form.customCategory.trim() : form.category;
+    if (!category || !form.description.trim()) return;
+    const ok = await createComplaint({
+      category,
+      description: form.description.trim(),
+      priority: form.priority || undefined,
     });
-    setShowOtherInput(false);
-    
-    alert("Complaint submitted successfully!");
-  };
-
-  // Add this function for admin to update status
-  const handleStatusUpdate = (id, newStatus) => {
-    setComplaints(complaints.map(complaint =>
-      complaint.id === id
-        ? { ...complaint, status: newStatus }
-        : complaint
-    ));
-    alert(`Complaint status updated to ${newStatus}`);
+    if (ok) {
+      setForm({ category: "", customCategory: "", description: "", priority: "" });
+      setShowCustom(false);
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 3000);
+    }
   };
 
   return (
@@ -104,114 +61,175 @@ function Complaints() {
       <section className="page-header dashboard-header">
         <div>
           <h1>Complaints</h1>
-          <p>Register a new issue or track the status of existing ones.</p>
+          <p>
+            {role === "admin"
+              ? "Manage all society complaints and update their status."
+              : "Raise a new complaint or track your existing ones."}
+          </p>
         </div>
       </section>
 
-      <div className="grid grid-2">
-        {/* New Complaint Form */}
-        <section className="card">
-          <div className="card-header">
-            <h3>Raise New Complaint</h3>
-          </div>
-          
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="label">Category</label>
-              <select 
-                className="input"
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="" disabled>Select a category</option>
-                <option value="plumbing">Plumbing</option>
-                <option value="electrical">Electrical</option>
-                <option value="security">Security</option>
-                <option value="cleaning">Cleaning</option>
-                <option value="parking">Parking</option>
-                <option value="noise">Noise Complaint</option>
-                <option value="pest">Pest Control</option>
-                <option value="others">Others</option>
-              </select>
+      {error && (
+        <div className="alert alert-error">
+          <span>{error}</span>
+          <button
+            onClick={clearError}
+            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {submitSuccess && (
+        <div className="alert alert-success">
+          <span>Complaint submitted successfully!</span>
+        </div>
+      )}
+
+      <div className={role === "admin" ? "" : "grid grid-2"}>
+        {role === "resident" && (
+          <section className="card">
+            <div className="card-header">
+              <h3>Raise New Complaint</h3>
             </div>
 
-            {showOtherInput && (
+            <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="label">Specify Category</label>
-                <input
-                  type="text"
+                <label className="label">Category</label>
+                <select
                   className="input"
-                  name="customCategory"
-                  placeholder="Please specify the category"
-                  value={formData.customCategory || ""}
-                  onChange={handleInputChange}
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="" disabled>Select a category</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {showCustom && (
+                <div className="form-group">
+                  <label className="label">Specify Category</label>
+                  <input
+                    type="text"
+                    className="input"
+                    name="customCategory"
+                    placeholder="Describe the category..."
+                    value={form.customCategory}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="label">Priority</label>
+                <select
+                  className="input"
+                  name="priority"
+                  value={form.priority}
+                  onChange={handleChange}
+                >
+                  <option value="">Select priority (optional)</option>
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="label">Description</label>
+                <textarea
+                  className="input"
+                  name="description"
+                  rows="5"
+                  placeholder="Describe the problem in detail..."
+                  value={form.description}
+                  onChange={handleChange}
                   required
                 />
               </div>
-            )}
 
-            <div className="form-group">
-              <label className="label">Issue Description</label>
-              <textarea 
-                className="input" 
-                name="description"
-                rows="6" 
-                placeholder="Briefly describe the problem..."
-                value={formData.description}
-                onChange={handleInputChange}
-                required
-              ></textarea>
-            </div>
+              <button type="submit" className="btn btn-primary btn-full" disabled={saving}>
+                {saving ? "Submitting..." : "Submit Complaint"}
+              </button>
+            </form>
+          </section>
+        )}
 
-            <button type="submit" className="btn btn-primary btn-full">
-              Submit Complaint
-            </button>
-          </form>
-        </section>
-
-        {/* Status Tracker */}
         <section className="card">
           <div className="card-header">
-            <h3>Complaint History</h3>
+            <h3>
+              {role === "admin" ? "All Society Complaints" : "My Complaints"}{" "}
+              ({visible.length})
+            </h3>
           </div>
 
-          <div className="nav">
-            {complaints.map((complaint) => (
-              <div key={complaint.id}>
-                <div className="card compact">
-                  <div className="card-header">
-                    <h3>{complaint.title}</h3>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                      <span className="label">{complaint.status}</span>
-                      {/* ONLY ADMIN sees this button - based on localStorage role */}
-                      {userRole === "admin" && (
-                        <select 
+          {loading ? (
+            <p style={{ textAlign: "center", color: "var(--color-muted, #888)", padding: "2rem" }}>
+              Loading complaints...
+            </p>
+          ) : visible.length === 0 ? (
+            <p style={{ textAlign: "center", color: "var(--color-muted, #888)", padding: "2rem" }}>
+              No complaints found.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {visible.map((c) => (
+                <div key={c._id} className="card compact" style={{ marginBottom: 0 }}>
+                  <div className="card-header" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
+                    <div>
+                      <div className="table-primary" style={{ fontWeight: 600 }}>{c.category}</div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--color-muted, #888)", marginTop: "2px" }}>
+                        {fmtDate(c.createdAt)}
+                        {c.priority && ` • Priority: ${c.priority}`}
+                        {role === "admin" && c.userId?.name && ` • ${c.userId.name}`}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          fontSize: "0.8rem",
+                          color: STATUS_COLOR[c.status] ?? "#888",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {STATUS_LABEL[c.status] ?? c.status}
+                      </span>
+
+                      {role === "admin" && (
+                        <select
                           className="input"
-                          style={{ width: "120px", padding: "4px 8px" }}
-                          value={complaint.status}
-                          onChange={(e) => handleStatusUpdate(complaint.id, e.target.value)}
+                          style={{ width: "130px", padding: "4px 8px", fontSize: "0.8rem" }}
+                          value={c.status}
+                          onChange={(e) => updateStatus(c._id, e.target.value)}
+                          disabled={saving}
                         >
-                          <option value="In Progress">In Progress</option>
-                          <option value="Resolved">Resolved</option>
+                          <option value="OPEN">Open</option>
+                          <option value="IN_PROGRESS">In Progress</option>
+                          <option value="RESOLVED">Resolved</option>
                         </select>
                       )}
                     </div>
                   </div>
-                  <p>{complaint.description}</p>
-                  <span className="label" style={{ fontSize: "12px", color: "var(--text-muted)" }}>
-                    {complaint.category} • {complaint.date}
-                  </span>
-                </div>
-                <div className="nav-divider" />
-              </div>
-            ))}
-          </div>
 
-          {complaints.length === 0 && (
-            <div className="empty-state">
-              No complaints yet
+                  <p style={{ margin: "0.5rem 0 0", fontSize: "0.9rem" }}>
+                    {c.description}
+                  </p>
+
+                  {c.resolvedAt && (
+                    <div style={{ fontSize: "0.78rem", color: "green", marginTop: "0.4rem" }}>
+                      Resolved on {fmtDate(c.resolvedAt)}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </section>

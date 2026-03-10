@@ -75,9 +75,8 @@ function App() {
             <Route path="/complaints" element={<Complaints />} />
             <Route path="/bookings" element={<Bookings />} />
 
-            <Route path="/applications" element={<Applications />} />
-
-            <Route path="/users" element={<Users />} />
+            {role === "admin" && <Route path="/applications" element={<Applications />} />}
+            {role === "admin" && <Route path="/users" element={<Users />} />}
             <Route path="/flats" element={<Flats />} />
             <Route path="/facilities" element={<Facilities />} />
           </Route>

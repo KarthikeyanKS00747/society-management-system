@@ -1,142 +1,51 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../viewmodels/useAuthStore";
+import { useFacilityStore } from "../viewmodels/useFacilityStore";
 
 function Facilities() {
   const navigate = useNavigate();
-  const [role, setRole] = useState("resident");
-  const [facilities, setFacilities] = useState([
-    {
-      id: 1,
-      name: "Clubhouse",
-      status: "available",
-      capacity: "100 people",
-      nextSlot: null,
-      maintenance: false,
-      bookedByUser: false,
-      message: "Capacity: 100 people"
-    },
-    {
-      id: 2,
-      name: "Swimming Pool",
-      status: "occupied",
-      capacity: null,
-      nextSlot: "4:00 PM",
-      maintenance: false,
-      bookedByUser: false,
-      message: "4:00 PM"
-    },
-    {
-      id: 3,
-      name: "Gym",
-      status: "available",
-      capacity: null,
-      nextSlot: "24/7 Access",
-      maintenance: false,
-      bookedByUser: false,
-      message: "24/7 Access"
-    },
-    {
-      id: 4,
-      name: "Tennis Court",
-      status: "maintenance",
-      capacity: null,
-      nextSlot: "Available tomorrow",
-      maintenance: true,
-      bookedByUser: false,
-      message: "Available tomorrow"
-    }
-  ]);
+  const { user } = useAuthStore();
+  const role = (user?.role ?? "resident").toLowerCase();
 
-  // Get user role from localStorage
-  useEffect(() => {
-    const userData = localStorage.getItem("user");
-    let userRole = "resident";
-    
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        userRole = (user.role || "resident").toLowerCase();
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
-    }
-    
-    setRole(userRole);
-  }, []);
+  const {
+    facilities, loading, saving, error,
+    fetchFacilities, createFacility, updateFacility, deleteFacility, clearError,
+  } = useFacilityStore();
 
-  const handleBookNow = (facilityId) => {
-    setFacilities(facilities.map(facility => 
-      facility.id === facilityId 
-        ? { ...facility, status: "occupied", bookedByUser: true, message: "Booked by you" }
-        : facility
-    ));
-    
-    alert("Facility booked successfully!");
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState({ name: "", capacity: "", isActive: true });
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  useEffect(() => { fetchFacilities(); }, []);
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    const ok = await createFacility({
+      name: addForm.name.trim(),
+      capacity: addForm.capacity !== "" ? Number(addForm.capacity) : undefined,
+      isActive: addForm.isActive,
+    });
+    if (ok) { setAddForm({ name: "", capacity: "", isActive: true }); setShowAdd(false); }
   };
 
-  const handleMaintenanceToggle = (facilityId) => {
-    setFacilities(facilities.map(facility => {
-      if (facility.id === facilityId) {
-        const newMaintenance = !facility.maintenance;
-        
-        // If turning maintenance OFF (Mark Available)
-        if (!newMaintenance) {
-          // Restore original message based on facility
-          let originalMessage = "";
-          if (facility.id === 1) originalMessage = "Capacity: 100 people";
-          else if (facility.id === 2) originalMessage = "4:00 PM";
-          else if (facility.id === 3) originalMessage = "24/7 Access";
-          else if (facility.id === 4) originalMessage = "Available tomorrow";
-          
-          return { 
-            ...facility, 
-            maintenance: false,
-            status: "available",
-            message: originalMessage,
-            bookedByUser: false
-          };
-        }
-        
-        // If turning maintenance ON (Set Maintenance)
-        return { 
-          ...facility, 
-          maintenance: true,
-          status: "maintenance",
-          message: "Under maintenance",
-          bookedByUser: false
-        };
-      }
-      return facility;
-    }));
+  const startEdit = (f) => {
+    setEditingId(f._id);
+    setEditForm({ name: f.name, capacity: f.capacity ?? "", isActive: f.isActive });
   };
 
-  const getStatusDisplay = (facility) => {
-    if (facility.maintenance) return "Maintenance";
-    if (facility.bookedByUser) return "Booked";
-    if (facility.status === "occupied") return "Occupied";
-    if (facility.status === "available") return "Available";
-    return facility.status.charAt(0).toUpperCase() + facility.status.slice(1);
+  const handleEditSave = async (id) => {
+    const ok = await updateFacility(id, {
+      name: editForm.name.trim(),
+      capacity: editForm.capacity !== "" ? Number(editForm.capacity) : null,
+      isActive: editForm.isActive,
+    });
+    if (ok) setEditingId(null);
   };
 
-  const getStatusClass = (facility) => {
-    if (facility.maintenance) return "status-maintenance";
-    if (facility.bookedByUser) return "status-booked";
-    return facility.status;
-  };
-
-  const isBookButtonDisabled = (facility) => {
-    return facility.maintenance || facility.status === "occupied";
-  };
-
-  const getBookButtonText = (facility) => {
-    if (facility.bookedByUser) return "Booked";
-    if (facility.maintenance) return "Unavailable";
-    if (facility.status === "occupied") return "Booked";
-    return "Book Now";
-  };
-
-  const getMaintenanceButtonText = (facility) => {
-    return facility.maintenance ? "Mark Available" : "Set Maintenance";
+  const handleDelete = (id) => {
+    if (window.confirm("Delete this facility? This cannot be undone.")) deleteFacility(id);
   };
 
   return (
@@ -144,84 +53,175 @@ function Facilities() {
       <section className="page-header dashboard-header">
         <div>
           <h1>Facilities</h1>
-          <p className="card-description">
-            {role === "admin" 
-              ? "Book and manage society amenities like clubhouse, gym, pool, and more."
-              : "Book society amenities like clubhouse, gym, pool, and more."
-            }
+          <p>
+            {role === "admin"
+              ? "Manage society amenities — add, edit, activate or remove facilities."
+              : "Browse and book society amenities."}
           </p>
         </div>
-      </section>
-
-      {/* Available Facilities */}
-      <section className="grid grid-4">
-        {facilities.map((facility) => (
-          <div className="card stat" key={facility.id}>
-            <div>
-              <h3>{facility.name}</h3>
-              <h2 className={getStatusClass(facility)}>
-                {getStatusDisplay(facility)}
-              </h2>
-              <p>{facility.message}</p>
-            </div>
-            
-            <div className="action-buttons" style={{ gap: '8px', marginTop: '12px' }}>
-              {/* Book button - visible to both admin and resident */}
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => handleBookNow(facility.id)}
-                disabled={isBookButtonDisabled(facility)}
-                style={{ flex: 1 }}
-              >
-                {getBookButtonText(facility)}
-              </button>
-
-              {/* Maintenance button - only visible to admin */}
-              {role === "admin" && (
-                <button
-                  className={`btn ${facility.maintenance ? 'btn-primary' : 'btn-outline'} btn-sm`}
-                  onClick={() => handleMaintenanceToggle(facility.id)}
-                  style={{ flex: 1 }}
-                >
-                  {getMaintenanceButtonText(facility)}
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </section>
-
-      {/* Booking Schedule */}
-      <section className="grid grid-2">
-        <div className="card compact">
-          <div className="card-header">
-            <h3>Today's Bookings</h3>
-            <button
-              className="btn btn-outline btn-sm"
-              onClick={() => navigate("/bookings")}
-            >
-              View All Bookings
+        {role === "admin" && (
+          <div className="header-actions">
+            <button className="btn btn-primary" onClick={() => setShowAdd((v) => !v)}>
+              {showAdd ? "Cancel" : "+ Add Facility"}
             </button>
           </div>
+        )}
+      </section>
 
-          <ul className="list">
-            <li>Clubhouse - Birthday Party (2:00 PM - 6:00 PM)</li>
-            <li>Swimming Pool - Regular Slot (10:00 AM - 12:00 PM)</li>
-            <li>Gym - Personal Training (7:00 PM - 8:00 PM)</li>
-          </ul>
+      {error && (
+        <div className="alert alert-error">
+          <span>{error}</span>
+          <button
+            onClick={clearError}
+            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
+          >
+            ✕
+          </button>
         </div>
+      )}
 
-        <div className="card compact">
-          <div className="card-header">
-            <h3>My Upcoming Bookings</h3>
-          </div>
+      {/* Add form — admin only */}
+      {role === "admin" && showAdd && (
+        <section className="card">
+          <div className="card-header"><h3>New Facility</h3></div>
+          <form onSubmit={handleAdd} style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div className="form-group" style={{ flex: "1 1 160px", margin: 0 }}>
+              <label className="label">Name</label>
+              <input
+                className="input"
+                value={addForm.name}
+                onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Swimming Pool"
+                required
+              />
+            </div>
+            <div className="form-group" style={{ flex: "0 1 120px", margin: 0 }}>
+              <label className="label">Capacity</label>
+              <input
+                type="number"
+                className="input"
+                value={addForm.capacity}
+                onChange={(e) => setAddForm((f) => ({ ...f, capacity: e.target.value }))}
+                placeholder="Optional"
+                min="0"
+              />
+            </div>
+            <div className="form-group" style={{ flex: "0 1 120px", margin: 0 }}>
+              <label className="label">Status</label>
+              <select
+                className="input"
+                value={addForm.isActive ? "active" : "inactive"}
+                onChange={(e) => setAddForm((f) => ({ ...f, isActive: e.target.value === "active" }))}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={saving} style={{ alignSelf: "flex-end" }}>
+              {saving ? "Saving..." : "Create"}
+            </button>
+          </form>
+        </section>
+      )}
 
-          <ul className="list">
-            <li>Gym - Friday, 7:00 AM</li>
-            <li>Clubhouse - Sunday, 3:00 PM</li>
-            <li>Tennis Court - Monday, 6:00 PM</li>
-          </ul>
+      {/* Facility cards */}
+      {loading ? (
+        <p style={{ textAlign: "center", color: "var(--color-muted, #888)", marginTop: "2rem" }}>Loading facilities...</p>
+      ) : facilities.length === 0 ? (
+        <p style={{ textAlign: "center", color: "var(--color-muted, #888)", marginTop: "2rem" }}>No facilities found.</p>
+      ) : (
+        <section className="grid grid-4" style={{ marginTop: "2rem" }}>
+          {facilities.map((f) => (
+            <div className="card stat" key={f._id}>
+              {editingId === f._id ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <input
+                    className="input"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))}
+                    placeholder="Name"
+                  />
+                  <input
+                    type="number"
+                    className="input"
+                    value={editForm.capacity}
+                    onChange={(e) => setEditForm((s) => ({ ...s, capacity: e.target.value }))}
+                    placeholder="Capacity (optional)"
+                    min="0"
+                  />
+                  <select
+                    className="input"
+                    value={editForm.isActive ? "active" : "inactive"}
+                    onChange={(e) => setEditForm((s) => ({ ...s, isActive: e.target.value === "active" }))}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => handleEditSave(f._id)} disabled={saving}>Save</button>
+                    <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => setEditingId(null)}>Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <h3>{f.name}</h3>
+                    <h2 style={{ color: f.isActive ? "green" : "#e53e3e", fontSize: "1rem", margin: "0.25rem 0" }}>
+                      {f.isActive ? "Active" : "Inactive"}
+                    </h2>
+                    {f.capacity && (
+                      <p style={{ color: "var(--color-muted, #888)", fontSize: "0.85rem" }}>
+                        Capacity: {f.capacity}
+                      </p>
+                    )}
+                  </div>
+
+                  {role === "admin" ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.75rem" }}>
+                      <button className="btn btn-outline btn-sm" onClick={() => startEdit(f)}>Edit</button>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={() => updateFacility(f._id, { isActive: !f.isActive })}
+                        disabled={saving}
+                      >
+                        {f.isActive ? "Disable" : "Enable"}
+                      </button>
+                      <button
+                        className="btn btn-sm"
+                        style={{ background: "#e53e3e", color: "#fff", border: "none" }}
+                        onClick={() => handleDelete(f._id)}
+                        disabled={saving}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ marginTop: "0.75rem", width: "100%" }}
+                      onClick={() => navigate("/bookings")}
+                      disabled={!f.isActive}
+                    >
+                      {f.isActive ? "Book Now" : "Unavailable"}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
+
+      <section className="card compact" style={{ marginTop: "1rem" }}>
+        <div className="card-header">
+          <h3>Bookings</h3>
+          <button className="btn btn-outline btn-sm" onClick={() => navigate("/bookings")}>
+            View All Bookings
+          </button>
         </div>
+        <p style={{ color: "var(--color-muted, #888)", fontSize: "0.9rem" }}>
+          To book a facility, head to the Bookings page and select your preferred facility, date and time.
+        </p>
       </section>
     </div>
   );

@@ -383,13 +383,16 @@ function AdminFlats() {
 
 // ─── Resident View ────────────────────────────────────────────────────────────
 function ResidentFlat() {
-  const { profile, loading, error, fetchProfile } = useProfileStore();
+  const { flats, loading, error, fetchFlats } = useFlatStore();
+  const { profile, fetchProfile } = useProfileStore();
 
   useEffect(() => {
+    fetchFlats();
     if (!profile) fetchProfile();
   }, []);
 
-  const flat = profile?.flat;
+  // Backend returns resident's own flat as the first (and only) item
+  const flat = flats[0] ?? null;
 
   return (
     <div className="page">
@@ -406,7 +409,7 @@ function ResidentFlat() {
         </div>
       )}
 
-      {loading && !profile ? (
+      {loading && !flat ? (
         <p style={{ textAlign: "center", color: "var(--color-muted, #888)", marginTop: "2rem" }}>Loading…</p>
       ) : !flat ? (
         <div className="card" style={{ textAlign: "center", padding: "2rem", color: "var(--color-muted, #888)" }}>
@@ -421,7 +424,7 @@ function ResidentFlat() {
             <StatCard label="Occupancy Type" value={flat.occupancyType ?? "—"} />
           </section>
 
-          {profile.society && (
+          {profile?.society && (
             <section className="card compact">
               <h3 style={{ marginBottom: "1rem" }}>Society Info</h3>
               <div className="list">
