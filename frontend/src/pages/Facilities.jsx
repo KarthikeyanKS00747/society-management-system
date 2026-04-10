@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../viewmodels/useAuthStore";
 import { useFacilityStore } from "../viewmodels/useFacilityStore";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 function Facilities() {
   const navigate = useNavigate();
@@ -10,15 +11,25 @@ function Facilities() {
 
   const {
     facilities, loading, saving, error,
-    fetchFacilities, createFacility, updateFacility, deleteFacility, clearError,
+    fetchFacilities, createFacility, updateFacility, deleteFacility,
   } = useFacilityStore();
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", capacity: "", isActive: true });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const notify = useNotificationStore((s) => s.notify);
+  const emptyNotified = useRef(false);
 
   useEffect(() => { fetchFacilities(); }, []);
+
+  useEffect(() => {
+    if (!loading && !error && facilities.length === 0 && !emptyNotified.current) {
+      notify({ message: "No facilities found.", type: "info" });
+      emptyNotified.current = true;
+    }
+    if (facilities.length > 0) emptyNotified.current = false;
+  }, [loading, error, facilities.length, notify]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -68,18 +79,6 @@ function Facilities() {
         )}
       </section>
 
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-          <button
-            onClick={clearError}
-            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
       {/* Add form — admin only */}
       {role === "admin" && showAdd && (
         <section className="card">
@@ -127,9 +126,7 @@ function Facilities() {
       {/* Facility cards */}
       {loading ? (
         <p style={{ textAlign: "center", color: "var(--color-muted, #888)", marginTop: "2rem" }}>Loading facilities...</p>
-      ) : facilities.length === 0 ? (
-        <p style={{ textAlign: "center", color: "var(--color-muted, #888)", marginTop: "2rem" }}>No facilities found.</p>
-      ) : (
+      ) : facilities.length === 0 ? null : (
         <section className="grid grid-4" style={{ marginTop: "2rem" }}>
           {facilities.map((f) => (
             <div className="card stat" key={f._id}>

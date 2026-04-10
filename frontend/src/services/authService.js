@@ -46,13 +46,13 @@ export class AuthService {
   }
   // ─── Register Society ─────────────────────────────────────────────────────
   // POST /auth/register-society
-  // Payload  : { societyName, name, email, phone, password }
+  // Payload  : { societyName, name, email, phone, password, razorpayKeyId, razorpayKeySecret }
   // Response : { society, admin }
-  static async registerSociety({ societyName, name, email, phone, password }) {
+  static async registerSociety({ societyName, name, email, phone, password, razorpayKeyId, razorpayKeySecret }) {
     const res = await fetch(API_ENDPOINTS.auth.registerSociety, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ societyName, name, email, phone, password }),
+      body: JSON.stringify({ societyName, name, email, phone, password, razorpayKeyId, razorpayKeySecret }),
     });
     return AuthService.#handleResponse(res); // { society, admin }
   }

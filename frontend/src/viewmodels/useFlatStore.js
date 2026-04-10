@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { FlatService } from "../services/flatService";
 import { useAuthStore } from "./useAuthStore";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notifyError = (err, fallback = "Something went wrong.") => {
+  const message = err?.message || fallback;
+  useNotificationStore.getState().notify({ message, type: "error" });
+};
 
 export const useFlatStore = create((set, get) => ({
   // ─── State ─────────────────────────────────────────────────────────────────
@@ -20,6 +26,7 @@ export const useFlatStore = create((set, get) => ({
       // Backend may return { flats: [...] } or [...] directly
       set({ flats: data.flats ?? data, loading: false });
     } catch (err) {
+      notifyError(err, "Failed to load flats.");
       set({ error: err.message, loading: false });
     }
   },
@@ -30,6 +37,7 @@ export const useFlatStore = create((set, get) => ({
       const data = await FlatService.getUnassignedResidents(token);
       set({ unassignedResidents: data.residents ?? data });
     } catch (err) {
+      notifyError(err, "Failed to load unassigned residents.");
       set({ error: err.message });
     }
   },
@@ -46,6 +54,7 @@ export const useFlatStore = create((set, get) => ({
       }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to create flat.");
       set({ error: err.message, saving: false });
       return false;
     }
@@ -62,6 +71,7 @@ export const useFlatStore = create((set, get) => ({
       set({ saving: false });
       return true;
     } catch (err) {
+      notifyError(err, "Failed to assign flat.");
       set({ error: err.message, saving: false });
       return false;
     }
@@ -78,6 +88,7 @@ export const useFlatStore = create((set, get) => ({
       set({ saving: false });
       return true;
     } catch (err) {
+      notifyError(err, "Failed to unassign flat.");
       set({ error: err.message, saving: false });
       return false;
     }
@@ -96,6 +107,7 @@ export const useFlatStore = create((set, get) => ({
       }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to update flat.");
       set({ error: err.message, saving: false });
       return false;
     }
@@ -112,6 +124,7 @@ export const useFlatStore = create((set, get) => ({
       }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to delete flat.");
       set({ error: err.message, saving: false });
       return false;
     }

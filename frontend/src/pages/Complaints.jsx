@@ -1,6 +1,7 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../viewmodels/useAuthStore";
 import { useComplaintStore } from "../viewmodels/useComplaintStore";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 const STATUS_LABEL = { OPEN: "Open", IN_PROGRESS: "In Progress", RESOLVED: "Resolved" };
 const STATUS_COLOR = { OPEN: "#e53e3e", IN_PROGRESS: "#d97706", RESOLVED: "green" };
@@ -17,21 +18,30 @@ function Complaints() {
   const role = (user?.role ?? "resident").toLowerCase();
   const userId = user?.id ?? user?._id;
 
-  const { complaints, loading, saving, error, fetchComplaints, createComplaint, updateStatus, clearError } =
+  const { complaints, loading, saving, error, fetchComplaints, createComplaint, updateStatus } =
     useComplaintStore();
 
   const [form, setForm] = useState({ category: "", customCategory: "", description: "", priority: "" });
   const [showCustom, setShowCustom] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-
-  useEffect(() => {
-    fetchComplaints();
-  }, []);
+  const notify = useNotificationStore((s) => s.notify);
+  const emptyNotified = useRef(false);
 
   const visible =
     role === "admin"
       ? complaints
       : complaints.filter((c) => c.userId === userId || c.userId?._id === userId);
+
+  useEffect(() => {
+    fetchComplaints();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !error && visible.length === 0 && !emptyNotified.current) {
+      notify({ message: "No complaints found.", type: "info" });
+      emptyNotified.current = true;
+    }
+    if (visible.length > 0) emptyNotified.current = false;
+  }, [loading, error, visible.length, notify]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,8 +61,7 @@ function Complaints() {
     if (ok) {
       setForm({ category: "", customCategory: "", description: "", priority: "" });
       setShowCustom(false);
-      setSubmitSuccess(true);
-      setTimeout(() => setSubmitSuccess(false), 3000);
+      notify({ message: "Complaint submitted successfully.", type: "success" });
     }
   };
 
@@ -68,24 +77,6 @@ function Complaints() {
           </p>
         </div>
       </section>
-
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-          <button
-            onClick={clearError}
-            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {submitSuccess && (
-        <div className="alert alert-success">
-          <span>Complaint submitted successfully!</span>
-        </div>
-      )}
 
       <div className={role === "admin" ? "" : "grid grid-2"}>
         {role === "resident" && (
@@ -147,10 +138,11 @@ function Complaints() {
                   className="input"
                   name="description"
                   rows="5"
-                  placeholder="Describe the problem in detail..."
+                  placeholder="Describe the problem in detail (min 10 characters)…"
                   value={form.description}
                   onChange={handleChange}
                   required
+                  minLength={10}
                 />
               </div>
 
@@ -173,11 +165,7 @@ function Complaints() {
             <p style={{ textAlign: "center", color: "var(--color-muted, #888)", padding: "2rem" }}>
               Loading complaints...
             </p>
-          ) : visible.length === 0 ? (
-            <p style={{ textAlign: "center", color: "var(--color-muted, #888)", padding: "2rem" }}>
-              No complaints found.
-            </p>
-          ) : (
+          ) : visible.length === 0 ? null : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {visible.map((c) => (
                 <div key={c._id} className="card compact" style={{ marginBottom: 0 }}>

@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { AnnouncementService } from "../services/announcementService";
 import { useAuthStore } from "./useAuthStore";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notifyError = (err, fallback = "Something went wrong.") => {
+  const message = err?.message || fallback;
+  useNotificationStore.getState().notify({ message, type: "error" });
+};
 
 export const useAnnouncementStore = create((set) => ({
   announcements: [],
@@ -16,6 +22,7 @@ export const useAnnouncementStore = create((set) => ({
       // backend returns array directly or { announcements: [...] }
       set({ announcements: Array.isArray(data) ? data : (data.announcements ?? []), loading: false });
     } catch (err) {
+      notifyError(err, "Failed to load announcements.");
       set({ error: err.message, loading: false });
     }
   },
@@ -32,6 +39,7 @@ export const useAnnouncementStore = create((set) => ({
       }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to create announcement.");
       set({ error: err.message, saving: false });
       return false;
     }

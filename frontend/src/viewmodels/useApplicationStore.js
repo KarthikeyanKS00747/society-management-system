@@ -11,6 +11,12 @@
 import { create } from "zustand";
 import { ApplicationService } from "../services/applicationService";
 import { useAuthStore } from "./useAuthStore";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notifyError = (err, fallback = "Something went wrong.") => {
+  const message = err?.message || fallback;
+  useNotificationStore.getState().notify({ message, type: "error" });
+};
 
 export const useApplicationStore = create((set, get) => ({
   applications: [],
@@ -26,6 +32,7 @@ export const useApplicationStore = create((set, get) => ({
       const data = await ApplicationService.list(token);
       set({ applications: data, loading: false });
     } catch (err) {
+      notifyError(err, "Failed to load applications.");
       set({ error: err.message, loading: false });
     }
   },
@@ -41,6 +48,7 @@ export const useApplicationStore = create((set, get) => ({
         actionLoading: null,
       }));
     } catch (err) {
+      notifyError(err, "Failed to accept application.");
       set({ error: err.message, actionLoading: null });
     }
   },
@@ -56,6 +64,7 @@ export const useApplicationStore = create((set, get) => ({
         actionLoading: null,
       }));
     } catch (err) {
+      notifyError(err, "Failed to reject application.");
       set({ error: err.message, actionLoading: null });
     }
   },

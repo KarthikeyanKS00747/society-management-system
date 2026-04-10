@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { FacilityService } from "../services/facilityService";
 import { useAuthStore } from "./useAuthStore";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notifyError = (err, fallback = "Something went wrong.") => {
+  const message = err?.message || fallback;
+  useNotificationStore.getState().notify({ message, type: "error" });
+};
 
 export const useFacilityStore = create((set, get) => ({
   facilities: [],
@@ -15,6 +21,7 @@ export const useFacilityStore = create((set, get) => ({
       const data = await FacilityService.getFacilities(token);
       set({ facilities: Array.isArray(data) ? data : (data.facilities ?? []), loading: false });
     } catch (err) {
+      notifyError(err, "Failed to load facilities.");
       set({ error: err.message, loading: false });
     }
   },
@@ -27,6 +34,7 @@ export const useFacilityStore = create((set, get) => ({
       set((state) => ({ facilities: [...state.facilities, created], saving: false }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to create facility.");
       set({ error: err.message, saving: false });
       return false;
     }
@@ -43,6 +51,7 @@ export const useFacilityStore = create((set, get) => ({
       }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to update facility.");
       set({ error: err.message, saving: false });
       return false;
     }
@@ -59,6 +68,7 @@ export const useFacilityStore = create((set, get) => ({
       }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to delete facility.");
       set({ error: err.message, saving: false });
       return false;
     }

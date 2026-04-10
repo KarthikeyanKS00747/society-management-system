@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useApplicationStore } from "../viewmodels/useApplicationStore";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 function Applications() {
   const {
@@ -10,10 +11,20 @@ function Applications() {
     fetchApplications,
     accept,
     reject,
-    clearError,
   } = useApplicationStore();
 
+  const notify = useNotificationStore((s) => s.notify);
+  const emptyNotified = useRef(false);
+
   useEffect(() => { fetchApplications(); }, []);
+
+  useEffect(() => {
+    if (!loading && !error && applications.length === 0 && !emptyNotified.current) {
+      notify({ message: "No pending applications.", type: "info" });
+      emptyNotified.current = true;
+    }
+    if (applications.length > 0) emptyNotified.current = false;
+  }, [loading, error, applications.length, notify]);
 
   // ── Accept ────────────────────────────────────────────────────────────────
   const handleAccept = (id) => {
@@ -70,32 +81,6 @@ function Applications() {
         </div>
       </section>
 
-      {/* Error */}
-      {error && (
-        <div
-          className="card"
-          style={{
-            background: "var(--danger-light, #fdecea)",
-            color: "var(--danger, #d32f2f)",
-            padding: "16px 20px",
-          }}
-        >
-          {error}{" "}
-          <span
-            onClick={fetchApplications}
-            style={{ textDecoration: "underline", cursor: "pointer" }}
-          >
-            Retry
-          </span>
-          <span
-            onClick={clearError}
-            style={{ float: "right", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ✕
-          </span>
-        </div>
-      )}
-
       {/* Table / empty state */}
       <section className="card compact">
         <div className="card-header" style={{ marginBottom: "16px" }}>
@@ -104,12 +89,7 @@ function Applications() {
 
         {loading ? (
           <p style={{ color: "var(--text-muted)", padding: "20px 0" }}>Loading…</p>
-        ) : applications.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
-            <p style={{ fontSize: "1.1rem", marginBottom: "8px" }}>No pending applications</p>
-            <p>All caught up! New requests will appear here.</p>
-          </div>
-        ) : (
+        ) : applications.length === 0 ? null : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>

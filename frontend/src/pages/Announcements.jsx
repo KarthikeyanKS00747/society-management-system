@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../viewmodels/useAuthStore";
 import { useAnnouncementStore } from "../viewmodels/useAnnouncementStore";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 function Announcements() {
   const { user } = useAuthStore();
@@ -13,16 +14,25 @@ function Announcements() {
     error,
     fetchAnnouncements,
     createAnnouncement,
-    clearError,
   } = useAnnouncementStore();
 
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [form, setForm] = useState({ title: "", message: "", expiryDate: "" });
+  const notify = useNotificationStore((s) => s.notify);
+  const emptyNotified = useRef(false);
 
   useEffect(() => {
     fetchAnnouncements();
   }, []);
+
+  useEffect(() => {
+    if (!loading && !error && announcements.length === 0 && !emptyNotified.current) {
+      notify({ message: "No announcements yet.", type: "info" });
+      emptyNotified.current = true;
+    }
+    if (announcements.length > 0) emptyNotified.current = false;
+  }, [loading, error, announcements.length, notify]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,72 +67,68 @@ function Announcements() {
         )}
       </section>
 
-      {/* Error Banner */}
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-          <button
-            onClick={clearError}
-            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
       {/* Create Form — admin only */}
       {isAdmin && showForm && (
-        <section className="card compact">
-          <h3 style={{ marginBottom: "1rem" }}>New Announcement</h3>
+        <section className="card">
+          <div className="card-header">
+            <h3>New Announcement</h3>
+          </div>
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Title *</label>
+              <label className="label">Title *</label>
               <input
-                className="form-input"
+                className="input"
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder="e.g. Water Supply Interruption"
                 required
+                minLength={3}
+                maxLength={200}
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Message *</label>
+              <label className="label">Message *</label>
               <textarea
-                className="form-input"
+                className="input"
                 rows={4}
                 value={form.message}
                 onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
                 placeholder="Write the full announcement here…"
                 required
+                minLength={5}
                 style={{ resize: "vertical" }}
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Expiry Date (optional)</label>
+              <label className="label">Expiry Date (optional)</label>
               <input
-                className="form-input"
+                className="input"
                 type="date"
                 value={form.expiryDate}
+                min={new Date().toISOString().split("T")[0]}
                 onChange={(e) => setForm((f) => ({ ...f, expiryDate: e.target.value }))}
               />
             </div>
-            <button className="btn btn-primary" type="submit" disabled={saving}>
-              {saving ? "Posting…" : "Post Announcement"}
-            </button>
+            <div className="action-buttons">
+              <button className="btn btn-primary" type="submit" disabled={saving}>
+                {saving ? "Posting…" : "Post Announcement"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setShowForm(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </section>
       )}
 
       {/* Announcements List */}
       {loading ? (
-        <p style={{ textAlign: "center", color: "var(--color-muted, #888)", marginTop: "2rem" }}>
-          Loading announcements…
-        </p>
-      ) : announcements.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", padding: "2rem", color: "var(--color-muted, #888)" }}>
-          No announcements yet.
-        </div>
-      ) : (
+        <p className="empty-state">Loading announcements…</p>
+      ) : announcements.length === 0 ? null : (
         <div className="grid grid-2">
           {announcements.map((item) => {
             const expired = isExpired(item.expiryDate);
@@ -140,7 +146,7 @@ function Announcements() {
                       </span>
                     )}
                     {item.expiryDate && !expired && (
-                      <span className="label" style={{ fontSize: "0.75rem", color: "var(--color-muted, #888)" }}>
+                      <span className="label" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                         Expires {new Date(item.expiryDate).toLocaleDateString()}
                       </span>
                     )}

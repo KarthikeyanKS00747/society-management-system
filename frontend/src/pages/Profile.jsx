@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../viewmodels/useAuthStore";
 import { useProfileStore } from "../viewmodels/useProfileStore";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 function Profile() {
   const navigate = useNavigate();
@@ -10,20 +11,17 @@ function Profile() {
     profile,
     loading,
     saving,
-    error,
     fetchProfile,
     updateProfile,
     changePassword,
-    clearError,
   } = useProfileStore();
+  const notify = useNotificationStore((s) => s.notify);
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
 
   // Change-password form (local — ephemeral, never shared)
   const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
-  const [pwError, setPwError] = useState(null);
-  const [pwSuccess, setPwSuccess] = useState(false);
 
   // Fetch on mount
   useEffect(() => { fetchProfile(); }, []);
@@ -42,7 +40,6 @@ function Profile() {
 
   const handleCancelClick = () => {
     setIsEditing(false);
-    clearError();
   };
 
   const handleInputChange = (e) => {
@@ -51,21 +48,37 @@ function Profile() {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim()) { alert("Name cannot be empty"); return; }
-    if (!formData.email.trim()) { alert("Email cannot be empty"); return; }
+    if (!formData.name.trim()) {
+      notify({ message: "Name cannot be empty.", type: "warning" });
+      return;
+    }
+    if (!formData.email.trim()) {
+      notify({ message: "Email cannot be empty.", type: "warning" });
+      return;
+    }
     const ok = await updateProfile(formData);
     if (ok) setIsEditing(false);
   };
 
+  // mirrors backend isStrongPassword
+  const STRONG_PW = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    setPwError(null);
-    setPwSuccess(false);
-    if (pwForm.next !== pwForm.confirm) { setPwError("New passwords do not match."); return; }
-    if (pwForm.next.length < 6) { setPwError("New password must be at least 6 characters."); return; }
+    if (pwForm.next !== pwForm.confirm) {
+      notify({ message: "New passwords do not match.", type: "warning" });
+      return;
+    }
+    if (!STRONG_PW.test(pwForm.next)) {
+      notify({
+        message: "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, and a digit.",
+        type: "warning",
+      });
+      return;
+    }
     const ok = await changePassword(pwForm.current, pwForm.next);
     if (ok) {
-      setPwSuccess(true);
+      notify({ message: "Password changed successfully.", type: "success" });
       setPwForm({ current: "", next: "", confirm: "" });
     }
   };
@@ -95,25 +108,6 @@ function Profile() {
           </button>
         </div>
       </section>
-
-      {/* Global store error */}
-      {error && (
-        <div
-          style={{
-            background: "var(--danger-light, #fdecea)",
-            color: "var(--danger, #d32f2f)",
-            padding: "12px 16px",
-            borderRadius: "8px",
-            marginBottom: "4px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>{error}</span>
-          <span onClick={clearError} style={{ cursor: "pointer", fontWeight: "bold" }}>✕</span>
-        </div>
-      )}
 
       {loading && !profile ? (
         <p style={{ color: "var(--text-muted)", padding: "40px 0", textAlign: "center" }}>Loading profile…</p>
@@ -194,17 +188,6 @@ function Profile() {
             <div className="card-header">
               <h3>Change Password</h3>
             </div>
-
-            {pwError && (
-              <div style={{ color: "var(--danger, #d32f2f)", marginBottom: "12px", fontSize: "0.9rem" }}>
-                {pwError}
-              </div>
-            )}
-            {pwSuccess && (
-              <div style={{ color: "var(--success, #388e3c)", marginBottom: "12px", fontSize: "0.9rem" }}>
-                Password changed successfully.
-              </div>
-            )}
 
             <form onSubmit={handlePasswordSubmit}>
               <div className="grid grid-2" style={{ gap: "16px" }}>

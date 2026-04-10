@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { ComplaintService } from "../services/complaintService";
 import { useAuthStore } from "./useAuthStore";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notifyError = (err, fallback = "Something went wrong.") => {
+  const message = err?.message || fallback;
+  useNotificationStore.getState().notify({ message, type: "error" });
+};
 
 export const useComplaintStore = create((set, get) => ({
   complaints: [],
@@ -15,6 +21,7 @@ export const useComplaintStore = create((set, get) => ({
       const data = await ComplaintService.getComplaints(token);
       set({ complaints: Array.isArray(data) ? data : (data.complaints ?? []), loading: false });
     } catch (err) {
+      notifyError(err, "Failed to load complaints.");
       set({ error: err.message, loading: false });
     }
   },
@@ -27,6 +34,7 @@ export const useComplaintStore = create((set, get) => ({
       set((state) => ({ complaints: [created, ...state.complaints], saving: false }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to submit complaint.");
       set({ error: err.message, saving: false });
       return false;
     }
@@ -43,6 +51,7 @@ export const useComplaintStore = create((set, get) => ({
       }));
       return true;
     } catch (err) {
+      notifyError(err, "Failed to update complaint.");
       set({ error: err.message, saving: false });
       return false;
     }

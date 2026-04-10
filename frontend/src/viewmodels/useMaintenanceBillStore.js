@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { MaintenanceBillService } from "../services/maintenanceBillService";
 import { useAuthStore } from "./useAuthStore";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notifyError = (err, fallback = "Something went wrong.") => {
+  const message = err?.message || fallback;
+  useNotificationStore.getState().notify({ message, type: "error" });
+};
 
 export const useMaintenanceBillStore = create((set) => ({
   bills:   [],
@@ -22,6 +28,7 @@ export const useMaintenanceBillStore = create((set) => ({
         : await MaintenanceBillService.getMyBills(token);
       set({ bills: Array.isArray(data) ? data : [], loading: false });
     } catch (err) {
+      notifyError(err, "Failed to load maintenance bills.");
       set({ error: err.message, loading: false });
     }
   },
@@ -44,6 +51,7 @@ export const useMaintenanceBillStore = create((set) => ({
       set({ bills: Array.isArray(updated) ? updated : [], saving: false });
       return result;
     } catch (err) {
+      notifyError(err, "Failed to generate bills.");
       set({ error: err.message, saving: false });
       return false;
     }

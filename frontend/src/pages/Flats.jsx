@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../viewmodels/useAuthStore";
 import { useFlatStore } from "../viewmodels/useFlatStore";
 import { useProfileStore } from "../viewmodels/useProfileStore";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function StatCard({ label, value, accent }) {
@@ -28,8 +29,10 @@ function AdminFlats() {
     unassignFlat,
     updateFlat,
     deleteFlat,
-    clearError,
   } = useFlatStore();
+
+  const notify = useNotificationStore((s) => s.notify);
+  const emptyNotified = useRef(false);
 
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({
@@ -51,6 +54,14 @@ function AdminFlats() {
     fetchFlats();
     fetchUnassignedResidents();
   }, []);
+
+  useEffect(() => {
+    if (!loading && !error && flats.length === 0 && !emptyNotified.current) {
+      notify({ message: "No flats found.", type: "info" });
+      emptyNotified.current = true;
+    }
+    if (flats.length > 0) emptyNotified.current = false;
+  }, [loading, error, flats.length, notify]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -127,14 +138,6 @@ function AdminFlats() {
         </button>
       </section>
 
-      {/* Error Banner */}
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-          <button onClick={clearError} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}>✕</button>
-        </div>
-      )}
-
       {/* Stats */}
       <section className="grid grid-4">
         <StatCard label="Total Flats" value={totalFlats} />
@@ -145,64 +148,75 @@ function AdminFlats() {
 
       {/* Create Flat Form */}
       {showCreate && (
-        <section className="card compact">
-          <h3 style={{ marginBottom: "1rem" }}>New Flat</h3>
-          <form onSubmit={handleCreate} style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "flex-end" }}>
-            <div className="form-group">
-              <label className="form-label">Flat Number *</label>
-              <input
-                className="form-input"
-                value={form.flatNumber}
-                onChange={(e) => setForm((f) => ({ ...f, flatNumber: e.target.value }))}
-                placeholder="e.g. 101"
-                required
-              />
+        <section className="card">
+          <div className="card-header">
+            <h3>New Flat</h3>
+          </div>
+          <form onSubmit={handleCreate}>
+            <div className="grid grid-2" style={{ gap: "20px" }}>
+              <div className="form-group">
+                <label className="label">Flat Number *</label>
+                <input
+                  className="input"
+                  value={form.flatNumber}
+                  onChange={(e) => setForm((f) => ({ ...f, flatNumber: e.target.value }))}
+                  placeholder="e.g. 101"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Block *</label>
+                <input
+                  className="input"
+                  value={form.block}
+                  onChange={(e) => setForm((f) => ({ ...f, block: e.target.value }))}
+                  placeholder="e.g. A"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Area (sq ft)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="1"
+                  value={form.areaSqFt}
+                  onChange={(e) => setForm((f) => ({ ...f, areaSqFt: e.target.value }))}
+                  placeholder="e.g. 1200"
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Occupancy Type</label>
+                <select
+                  className="input"
+                  value={form.occupancyType}
+                  onChange={(e) => setForm((f) => ({ ...f, occupancyType: e.target.value }))}
+                >
+                  <option value="OWNER">Owner</option>
+                  <option value="RENTER">Renter</option>
+                </select>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Block</label>
-              <input
-                className="form-input"
-                value={form.block}
-                onChange={(e) => setForm((f) => ({ ...f, block: e.target.value }))}
-                placeholder="e.g. A"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Area (sq ft)</label>
-              <input
-                className="form-input"
-                type="number"
-                value={form.areaSqFt}
-                onChange={(e) => setForm((f) => ({ ...f, areaSqFt: e.target.value }))}
-                placeholder="e.g. 1200"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Occupancy Type</label>
-              <select
-                className="form-input"
-                value={form.occupancyType}
-                onChange={(e) => setForm((f) => ({ ...f, occupancyType: e.target.value }))}
+            <div className="action-buttons" style={{ marginTop: "8px" }}>
+              <button className="btn btn-primary" type="submit" disabled={saving}>
+                {saving ? "Creating…" : "Create Flat"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setShowCreate(false)}
               >
-                <option value="OWNER">Owner</option>
-                <option value="RENTER">Renter</option>
-              </select>
+                Cancel
+              </button>
             </div>
-            <button className="btn btn-primary" type="submit" disabled={saving}>
-              {saving ? "Creating…" : "Create"}
-            </button>
           </form>
         </section>
       )}
 
       {/* Flats Table */}
       {loading ? (
-        <p style={{ textAlign: "center", color: "var(--color-muted, #888)", marginTop: "2rem" }}>Loading flats…</p>
-      ) : flats.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", padding: "2rem", color: "var(--color-muted, #888)" }}>
-          No flats found. Use the button above to create the first flat.
-        </div>
-      ) : (
+        <p className="empty-state">Loading flats…</p>
+      ) : flats.length === 0 ? null : (
         <section className="card compact" style={{ padding: 0, overflow: "hidden" }}>
           <table className="data-table" style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -227,110 +241,121 @@ function AdminFlats() {
                       {flat.occupant ? (
                         <span>
                           <strong>{flat.occupant.name}</strong>{" "}
-                          <span style={{ color: "var(--color-muted, #888)", fontSize: "0.85em" }}>
+                          <span style={{ color: "var(--text-muted)", fontSize: "0.85em" }}>
                             {flat.occupant.email}
                           </span>
                         </span>
                       ) : (
-                        <span style={{ color: "var(--color-muted, #888)" }}>Vacant</span>
+                        <span style={{ color: "var(--text-muted)" }}>Vacant</span>
                       )}
                     </td>
                     <td>
-                      {flat.occupant ? (
+                      <div className="action-buttons">
+                        {flat.occupant ? (
+                          <button
+                            className="btn btn-danger btn-sm"
+                            disabled={saving}
+                            onClick={() => handleUnassign(flat._id)}
+                          >
+                            Unassign
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => {
+                              setAssigningFlatId(
+                                assigningFlatId === flat._id ? null : flat._id
+                              );
+                              setEditingFlatId(null);
+                              setSelectedUser("");
+                            }}
+                          >
+                            {assigningFlatId === flat._id ? "Cancel" : "Assign"}
+                          </button>
+                        )}
                         <button
-                          className="btn btn-danger btn-sm"
-                          disabled={saving}
-                          onClick={() => handleUnassign(flat._id)}
+                          className="btn btn-outline btn-sm"
+                          onClick={() =>
+                            editingFlatId === flat._id
+                              ? setEditingFlatId(null)
+                              : handleEditOpen(flat)
+                          }
                         >
-                          Unassign
+                          {editingFlatId === flat._id ? "Cancel" : "Edit"}
                         </button>
-                      ) : (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => {
-                            setAssigningFlatId(
-                              assigningFlatId === flat._id ? null : flat._id
-                            );
-                            setEditingFlatId(null);
-                            setSelectedUser("");
-                          }}
-                        >
-                          Assign
-                        </button>
-                      )}
-                      {" "}
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() =>
-                          editingFlatId === flat._id
-                            ? setEditingFlatId(null)
-                            : handleEditOpen(flat)
-                        }
-                      >
-                        {editingFlatId === flat._id ? "Cancel" : "Edit"}
-                      </button>
-                      {" "}
-                      {!flat.occupant && (
-                        <button
-                          className="btn btn-danger btn-sm"
-                          disabled={saving}
-                          onClick={() => handleDelete(flat._id)}
-                        >
-                          Delete
-                        </button>
-                      )}
+                        {!flat.occupant && (
+                          <button
+                            className="btn btn-danger btn-sm"
+                            disabled={saving}
+                            onClick={() => handleDelete(flat._id)}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
 
                   {/* Inline Edit Row */}
                   {editingFlatId === flat._id && (
-                    <tr key={`${flat._id}-edit`} style={{ background: "var(--color-surface-alt, #f9f9f9)" }}>
-                      <td colSpan={6} style={{ padding: "0.75rem 1rem" }}>
-                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-                          <input
-                            className="form-input"
-                            style={{ maxWidth: 90 }}
-                            placeholder="Block"
-                            value={editForm.block}
-                            onChange={(e) => setEditForm((f) => ({ ...f, block: e.target.value }))}
-                          />
-                          <input
-                            className="form-input"
-                            style={{ maxWidth: 90 }}
-                            placeholder="Flat No."
-                            value={editForm.flatNumber}
-                            onChange={(e) => setEditForm((f) => ({ ...f, flatNumber: e.target.value }))}
-                          />
-                          <input
-                            className="form-input"
-                            style={{ maxWidth: 110 }}
-                            type="number"
-                            placeholder="Area (sq ft)"
-                            value={editForm.areaSqFt}
-                            onChange={(e) => setEditForm((f) => ({ ...f, areaSqFt: e.target.value }))}
-                          />
-                          <select
-                            className="form-input"
-                            style={{ maxWidth: 120 }}
-                            value={editForm.occupancyType}
-                            onChange={(e) => setEditForm((f) => ({ ...f, occupancyType: e.target.value }))}
-                          >
-                            <option value="OWNER">Owner</option>
-                            <option value="RENTER">Renter</option>
-                          </select>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            disabled={saving}
-                            onClick={() => handleEditSave(flat._id)}
-                          >
-                            {saving ? "Saving…" : "Save"}
-                          </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => setEditingFlatId(null)}
-                          >
-                            Cancel
-                          </button>
+                    <tr key={`${flat._id}-edit`}>
+                      <td colSpan={6} style={{ padding: "16px 12px", background: "rgba(255,255,255,0.03)" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "12px", alignItems: "end" }}>
+                          <div>
+                            <label className="label">Block</label>
+                            <input
+                              className="input"
+                              placeholder="e.g. A"
+                              value={editForm.block}
+                              onChange={(e) => setEditForm((f) => ({ ...f, block: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <label className="label">Flat No.</label>
+                            <input
+                              className="input"
+                              placeholder="e.g. 101"
+                              value={editForm.flatNumber}
+                              onChange={(e) => setEditForm((f) => ({ ...f, flatNumber: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <label className="label">Area (sq ft)</label>
+                            <input
+                              className="input"
+                              type="number"
+                              min="1"
+                              placeholder="e.g. 1200"
+                              value={editForm.areaSqFt}
+                              onChange={(e) => setEditForm((f) => ({ ...f, areaSqFt: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <label className="label">Type</label>
+                            <select
+                              className="input"
+                              value={editForm.occupancyType}
+                              onChange={(e) => setEditForm((f) => ({ ...f, occupancyType: e.target.value }))}
+                            >
+                              <option value="OWNER">Owner</option>
+                              <option value="RENTER">Renter</option>
+                            </select>
+                          </div>
+                          <div style={{ display: "flex", gap: "8px", alignItems: "flex-end", paddingBottom: "0" }}>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              disabled={saving}
+                              onClick={() => handleEditSave(flat._id)}
+                            >
+                              {saving ? "Saving…" : "Save"}
+                            </button>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => setEditingFlatId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -338,35 +363,39 @@ function AdminFlats() {
 
                   {/* Inline Assign Panel */}
                   {assigningFlatId === flat._id && (
-                    <tr key={`${flat._id}-assign`} style={{ background: "var(--color-surface-alt, #f9f9f9)" }}>
-                      <td colSpan={6} style={{ padding: "0.75rem 1rem" }}>
-                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                          <select
-                            className="form-input"
-                            style={{ maxWidth: 320 }}
-                            value={selectedUser}
-                            onChange={(e) => setSelectedUser(e.target.value)}
-                          >
-                            <option value="">Select resident…</option>
-                            {unassignedResidents.map((r) => (
-                              <option key={r._id} value={r._id}>
-                                {r.name} ({r.email})
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            disabled={!selectedUser || saving}
-                            onClick={() => handleAssign(flat._id)}
-                          >
-                            {saving ? "Assigning…" : "Confirm"}
-                          </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={() => setAssigningFlatId(null)}
-                          >
-                            Cancel
-                          </button>
+                    <tr key={`${flat._id}-assign`}>
+                      <td colSpan={6} style={{ padding: "16px 12px", background: "rgba(255,255,255,0.03)" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "12px", alignItems: "end", maxWidth: 560 }}>
+                          <div>
+                            <label className="label">Assign Resident</label>
+                            <select
+                              className="input"
+                              value={selectedUser}
+                              onChange={(e) => setSelectedUser(e.target.value)}
+                            >
+                              <option value="">Select resident…</option>
+                              {unassignedResidents.map((r) => (
+                                <option key={r._id} value={r._id}>
+                                  {r.name} ({r.email})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div style={{ display: "flex", gap: "8px", paddingTop: "22px" }}>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              disabled={!selectedUser || saving}
+                              onClick={() => handleAssign(flat._id)}
+                            >
+                              {saving ? "Assigning…" : "Confirm"}
+                            </button>
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => setAssigningFlatId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -383,7 +412,7 @@ function AdminFlats() {
 
 // ─── Resident View ────────────────────────────────────────────────────────────
 function ResidentFlat() {
-  const { flats, loading, error, fetchFlats } = useFlatStore();
+  const { flats, loading, fetchFlats } = useFlatStore();
   const { profile, fetchProfile } = useProfileStore();
 
   useEffect(() => {
@@ -403,12 +432,6 @@ function ResidentFlat() {
         </div>
       </section>
 
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-        </div>
-      )}
-
       {loading && !flat ? (
         <p style={{ textAlign: "center", color: "var(--color-muted, #888)", marginTop: "2rem" }}>Loading…</p>
       ) : !flat ? (
@@ -425,8 +448,10 @@ function ResidentFlat() {
           </section>
 
           {profile?.society && (
-            <section className="card compact">
-              <h3 style={{ marginBottom: "1rem" }}>Society Info</h3>
+            <section className="card">
+              <div className="card-header">
+                <h3>Society Info</h3>
+              </div>
               <div className="list">
                 <div className="list-item">
                   <span>Society Name</span>
@@ -442,7 +467,7 @@ function ResidentFlat() {
                 </div>
                 <div className="list-item">
                   <span>Account Status</span>
-                  <span style={{ color: profile.isActive ? "green" : "red", fontWeight: 600 }}>
+                  <span style={{ color: profile.isActive ? "#10b981" : "#ef4444", fontWeight: 600 }}>
                     {profile.isActive ? "Active" : "Inactive"}
                   </span>
                 </div>

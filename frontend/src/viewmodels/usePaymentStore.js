@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { PaymentService } from "../services/paymentService";
 import { useAuthStore } from "./useAuthStore";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notify = (message, type = "error") => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type });
+};
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 /** Dynamically injects the Razorpay checkout script. Idempotent. */
@@ -32,6 +38,7 @@ export const usePaymentStore = create((set, get) => ({
       set({ razorpayKey: key });
       return key;
     } catch (err) {
+      notify(err?.message || "Failed to load Razorpay key.");
       set({ error: err.message });
       return null;
     }
@@ -45,6 +52,7 @@ export const usePaymentStore = create((set, get) => ({
       const data = await PaymentService.getPayments(token);
       set({ payments: Array.isArray(data) ? data : [], loading: false });
     } catch (err) {
+      notify(err?.message || "Failed to load payment history.");
       set({ error: err.message, loading: false });
     }
   },
@@ -108,6 +116,7 @@ export const usePaymentStore = create((set, get) => ({
 
               onSuccess?.(result.payment);
             } catch (verifyErr) {
+              notify(verifyErr?.message || "Payment verification failed.");
               set({ error: verifyErr.message, paying: false });
               onFailure?.(verifyErr.message);
             } finally {
@@ -117,6 +126,7 @@ export const usePaymentStore = create((set, get) => ({
 
           modal: {
             ondismiss: () => {
+              notify("Payment cancelled.", "warning");
               set({ paying: false });
               onFailure?.("Payment cancelled.");
               resolve();
@@ -126,6 +136,7 @@ export const usePaymentStore = create((set, get) => ({
 
         rzp.on("payment.failed", (response) => {
           const msg = response.error?.description || "Payment failed.";
+          notify(msg);
           set({ error: msg, paying: false });
           onFailure?.(msg);
           resolve();
@@ -134,6 +145,7 @@ export const usePaymentStore = create((set, get) => ({
         rzp.open();
       });
     } catch (err) {
+      notify(err?.message || "Payment failed.");
       set({ error: err.message, paying: false });
       onFailure?.(err.message);
     }

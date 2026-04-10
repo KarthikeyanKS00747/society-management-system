@@ -29,7 +29,7 @@ function billStatus(bill) {
 function MaintenanceBills() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { bills, loading, saving, error, fetchBills, generateBills, clearError } = useMaintenanceBillStore();
+  const { bills, loading, saving, fetchBills, generateBills } = useMaintenanceBillStore();
   const { payBill, paying } = usePaymentStore();
 
   const isAdmin = user?.role === "ADMIN";
@@ -75,7 +75,6 @@ function MaintenanceBills() {
       prefill:   { name: user?.name, email: user?.email, contact: user?.phone },
       billLabel: `Maintenance – ${monthLabel(bill.month, bill.year)}`,
       onSuccess: () => fetchBills(),
-      onFailure: (msg) => alert(msg),
     });
   };
 
@@ -152,16 +151,10 @@ function MaintenanceBills() {
               </div>
             )}
 
-            {error && (
-              <div style={{ marginBottom: "12px", fontSize: "0.9rem", color: "var(--danger, #d32f2f)" }}>
-                {error}
-              </div>
-            )}
-
             <div className="modal-actions">
               <button
                 className="btn btn-outline modal-btn"
-                onClick={() => { setShowGenModal(false); setGenResult(null); clearError(); }}
+                onClick={() => { setShowGenModal(false); setGenResult(null); }}
               >
                 {genResult ? "Close" : "Cancel"}
               </button>
@@ -206,18 +199,6 @@ function MaintenanceBills() {
           )}
         </div>
       </section>
-
-      {/* Global error */}
-      {error && !showGenModal && (
-        <div style={{
-          background: "var(--danger-light, #fdecea)", color: "var(--danger, #d32f2f)",
-          padding: "12px 16px", borderRadius: "8px", marginBottom: "4px",
-          display: "flex", justifyContent: "space-between", alignItems: "center"
-        }}>
-          <span>{error}</span>
-          <span onClick={clearError} style={{ cursor: "pointer", fontWeight: "bold" }}>✕</span>
-        </div>
-      )}
 
       {/* ── Summary Cards ─────────────────────────────────────────────────────── */}
       <section className="grid grid-4">

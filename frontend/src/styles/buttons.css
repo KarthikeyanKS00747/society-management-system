@@ -7,6 +7,15 @@
   transition: var(--transition);
 }
 
+/* btn-sm: compact size that still matches .input height when placed beside one */
+.btn.btn-sm {
+  padding: 0 16px;
+  font-size: 13px;
+  min-height: 50px;          /* matches .input padding 14px top + 14px bottom + ~22px text */
+  align-self: stretch;       /* in flex/grid rows: fills the row height automatically */
+}
+
+
 .btn-primary {
   background: var(--primary);
   color: #ffffff;

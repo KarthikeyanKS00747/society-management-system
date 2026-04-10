@@ -4,7 +4,7 @@ import { useAuthStore } from "../viewmodels/useAuthStore";
 
 function Login() {
   const navigate = useNavigate();
-  const { login, loading, error, isLoggedIn, clearError } = useAuthStore();
+  const { login, loading, isLoggedIn } = useAuthStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,31 +23,6 @@ function Login() {
     <div className="auth-page">
       <div className="card auth-card">
         <h2 className="auth-title">Login</h2>
-
-        {error && (
-          <div
-            className="auth-error"
-            style={{
-              background: "var(--danger-light, #fdecea)",
-              color: "var(--danger, #d32f2f)",
-              padding: "10px 14px",
-              borderRadius: "8px",
-              marginBottom: "12px",
-              fontSize: "0.9rem",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <span>{error}</span>
-            <span
-              onClick={clearError}
-              style={{ cursor: "pointer", fontWeight: "bold", marginLeft: "12px" }}
-            >
-              ✕
-            </span>
-          </div>
-        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <input

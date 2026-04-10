@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useFlatStore } from "../viewmodels/useFlatStore";
 
 function Users() {
-  const { flats, unassignedResidents, loading, error, fetchFlats, fetchUnassignedResidents, clearError } = useFlatStore();
+  const { flats, unassignedResidents, loading, fetchFlats, fetchUnassignedResidents } = useFlatStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -59,18 +59,6 @@ function Users() {
           <p>All society residents — active (flat assigned) and inactive (pending assignment).</p>
         </div>
       </section>
-
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-          <button
-            onClick={clearError}
-            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {/* Filters */}
       <section className="card filter-card">

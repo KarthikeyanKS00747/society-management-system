@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./viewmodels/useAuthStore";
 
 import Layout from "./components/Layout";
+import ToastStack from "./components/ToastStack";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -57,6 +58,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ToastStack />
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
 

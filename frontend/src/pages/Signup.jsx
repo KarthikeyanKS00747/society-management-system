@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../viewmodels/useAuthStore";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 function Signup() {
   const navigate = useNavigate();
-  const { registerSociety, loading, error, clearError } = useAuthStore();
+  const { registerSociety, loading } = useAuthStore();
+  const notify = useNotificationStore((s) => s.notify);
 
   const [formData, setFormData] = useState({
     societyName: "",
@@ -13,6 +15,8 @@ function Signup() {
     phone: "",
     password: "",
     confirmPassword: "",
+    razorpayKeyId: "",
+    razorpayKeySecret: "",
   });
 
   const handleChange = (e) => {
@@ -20,10 +24,28 @@ function Signup() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // ─── Password strength (mirrors backend isStrongPassword) ───────────────────
+  const STRONG_PW = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      notify({ message: "Passwords do not match.", type: "warning" });
+      return;
+    }
+    if (!STRONG_PW.test(formData.password)) {
+      notify({
+        message: "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, and a digit.",
+        type: "warning",
+      });
+      return;
+    }
+    // Mirror backend: razorpayKeyId must start with 'rzp_'
+    if (!formData.razorpayKeyId.startsWith("rzp_")) {
+      notify({
+        message: "Razorpay Key ID must start with 'rzp_'. Find it in Razorpay Dashboard -> Settings -> API Keys.",
+        type: "warning",
+      });
       return;
     }
     const { confirmPassword, ...payload } = formData;
@@ -38,30 +60,6 @@ function Signup() {
         <p className="auth-subtitle">
           Create your society and admin account
         </p>
-
-        {error && (
-          <div
-            style={{
-              background: "var(--danger-light, #fdecea)",
-              color: "var(--danger, #d32f2f)",
-              padding: "10px 14px",
-              borderRadius: "8px",
-              marginBottom: "12px",
-              fontSize: "0.9rem",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <span>{error}</span>
-            <span
-              onClick={clearError}
-              style={{ cursor: "pointer", fontWeight: "bold", marginLeft: "12px" }}
-            >
-              ✕
-            </span>
-          </div>
-        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -139,6 +137,62 @@ function Signup() {
               onChange={handleChange}
               required
               disabled={loading}
+            />
+          </div>
+
+          {/* ─── Razorpay Payment Setup ─────────────────────────────────── */}
+          <div style={{
+            margin: "8px 0 4px",
+            borderTop: "1px solid var(--border-color, #e2e8f0)",
+            paddingTop: "16px",
+          }}>
+            <p style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: "4px", color: "var(--text, #1a202c)" }}>
+              💳 Razorpay Payment Setup
+            </p>
+            <p style={{
+              fontSize: "0.78rem",
+              color: "var(--text-muted, #718096)",
+              marginBottom: "12px",
+              lineHeight: 1.5,
+            }}>
+              Your society needs its own Razorpay account to collect maintenance payments.
+              Find your keys at{" "}
+              <a
+                href="https://dashboard.razorpay.com/app/keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--primary, #3b82f6)" }}
+              >
+                Razorpay Dashboard → Settings → API Keys
+              </a>.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <input
+              type="text"
+              name="razorpayKeyId"
+              className="input"
+              placeholder="Razorpay Key ID  (starts with rzp_)"
+              value={formData.razorpayKeyId}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="form-group">
+            <input
+              type="password"
+              name="razorpayKeySecret"
+              className="input"
+              placeholder="Razorpay Key Secret"
+              value={formData.razorpayKeySecret}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              autoComplete="new-password"
             />
           </div>
 

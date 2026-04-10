@@ -16,6 +16,12 @@
 import { create } from "zustand";
 import { ProfileService } from "../services/profileService";
 import { useAuthStore } from "./useAuthStore";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notifyError = (err, fallback = "Something went wrong.") => {
+  const message = err?.message || fallback;
+  useNotificationStore.getState().notify({ message, type: "error" });
+};
 
 export const useProfileStore = create((set) => ({
   profile: null,
@@ -31,6 +37,7 @@ export const useProfileStore = create((set) => ({
       const profile = await ProfileService.getProfile(token);
       set({ profile, loading: false });
     } catch (err) {
+      notifyError(err, "Failed to load profile.");
       set({ error: err.message, loading: false });
     }
   },
@@ -45,6 +52,7 @@ export const useProfileStore = create((set) => ({
       set({ profile, saving: false });
       return true;
     } catch (err) {
+      notifyError(err, "Failed to update profile.");
       set({ error: err.message, saving: false });
       return false;
     }
@@ -60,6 +68,7 @@ export const useProfileStore = create((set) => ({
       set({ saving: false });
       return true;
     } catch (err) {
+      notifyError(err, "Failed to change password.");
       set({ error: err.message, saving: false });
       return false;
     }

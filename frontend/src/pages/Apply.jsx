@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApplicationService } from "../services/applicationService";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 // ─── Step enum ────────────────────────────────────────────────────────────────
 const STEP = { FORM: "form", SUCCESS: "success" };
 
 function Apply() {
   const navigate = useNavigate();
+  const notify = useNotificationStore((s) => s.notify);
 
   const [step, setStep]       = useState(STEP.FORM);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState(null);
   const [result, setResult]   = useState(null); // { msg, applicationId, expiresAt }
 
   const [formData, setFormData] = useState({
@@ -25,25 +26,23 @@ function Apply() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.");
+      notify({ message: "Passwords do not match.", type: "warning" });
       return;
     }
 
     setLoading(true);
-    setError(null);
     try {
       const { confirmPassword, ...payload } = formData;
       const data = await ApplicationService.apply(payload);
       setResult(data);
       setStep(STEP.SUCCESS);
     } catch (err) {
-      setError(err.message);
+      notify({ message: err?.message || "Application failed.", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -158,30 +157,6 @@ function Apply() {
         <p className="auth-subtitle">
           Submit your details — the admin will review your request within 2 weeks.
         </p>
-
-        {error && (
-          <div
-            style={{
-              background: "var(--danger-light, #fdecea)",
-              color: "var(--danger, #d32f2f)",
-              padding: "10px 14px",
-              borderRadius: "8px",
-              marginBottom: "12px",
-              fontSize: "0.9rem",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <span>{error}</span>
-            <span
-              onClick={() => setError(null)}
-              style={{ cursor: "pointer", fontWeight: "bold", marginLeft: "12px" }}
-            >
-              ✕
-            </span>
-          </div>
-        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">

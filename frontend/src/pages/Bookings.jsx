@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../viewmodels/useAuthStore";
 import { useBookingStore } from "../viewmodels/useBookingStore";
 import { useFacilityStore } from "../viewmodels/useFacilityStore";
+import { useNotificationStore } from "../viewmodels/useNotificationStore";
 
 const STATUS_COLOR = { PENDING: "#d97706", APPROVED: "green", REJECTED: "#e53e3e" };
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : "-");
@@ -14,25 +15,37 @@ function Bookings() {
 
   const {
     bookings, loading, saving, error,
-    fetchBookings, createBooking, approveBooking, rejectBooking, clearError,
+    fetchBookings, createBooking, approveBooking, rejectBooking,
   } = useBookingStore();
   const { facilities, fetchFacilities } = useFacilityStore();
 
   const [form, setForm] = useState({ facilityId: "", date: "", startTime: "", endTime: "" });
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const notify = useNotificationStore((s) => s.notify);
+  const emptyNotified = useRef(false);
 
   useEffect(() => {
     fetchBookings();
     fetchFacilities();
   }, []);
 
+  useEffect(() => {
+    if (!loading && !error && bookings.length === 0 && !emptyNotified.current) {
+      notify({ message: "No bookings found.", type: "info" });
+      emptyNotified.current = true;
+    }
+    if (bookings.length > 0) emptyNotified.current = false;
+  }, [loading, error, bookings.length, notify]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.startTime && form.endTime && form.endTime <= form.startTime) {
+      notify({ message: "End time must be after start time.", type: "warning" });
+      return;
+    }
     const ok = await createBooking(form);
     if (ok) {
       setForm({ facilityId: "", date: "", startTime: "", endTime: "" });
-      setSubmitSuccess(true);
-      setTimeout(() => setSubmitSuccess(false), 3000);
+      notify({ message: "Booking request submitted. Awaiting admin approval.", type: "success" });
     }
   };
 
@@ -61,24 +74,6 @@ function Bookings() {
           </button>
         </div>
       </section>
-
-      {error && (
-        <div className="alert alert-error">
-          <span>{error}</span>
-          <button
-            onClick={clearError}
-            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontWeight: "bold" }}
-          >
-            x
-          </button>
-        </div>
-      )}
-
-      {submitSuccess && (
-        <div className="alert alert-success">
-          <span>Booking request submitted! Awaiting admin approval.</span>
-        </div>
-      )}
 
       {role === "admin" && (
         <section className="grid grid-4">
@@ -154,9 +149,7 @@ function Bookings() {
           </div>
           {loading ? (
             <p style={{ textAlign: "center", color: "var(--color-muted, #888)", padding: "2rem" }}>Loading bookings...</p>
-          ) : bookings.length === 0 ? (
-            <p style={{ textAlign: "center", color: "var(--color-muted, #888)", padding: "2rem" }}>No bookings found.</p>
-          ) : (
+          ) : bookings.length === 0 ? null : (
             <div className="table-container">
               <table className="data-table">
                 <thead>

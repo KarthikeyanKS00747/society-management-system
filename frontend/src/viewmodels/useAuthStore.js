@@ -20,6 +20,12 @@
 import { create } from "zustand";
 import { AuthService } from "../services/authService";
 import { API_ENDPOINTS } from "../config/api";
+import { useNotificationStore } from "./useNotificationStore";
+
+const notifyError = (err, fallback = "Something went wrong.") => {
+  const message = err?.message || fallback;
+  useNotificationStore.getState().notify({ message, type: "error" });
+};
 
 // ─── JWT decoder (no extra library needed) ───────────────────────────────────
 function decodeJwt(token) {
@@ -99,6 +105,7 @@ export const useAuthStore = create((set, get) => ({
       saveToken(token);
       set({ token, user, isLoggedIn: true, loading: false });
     } catch (err) {
+      notifyError(err, "Login failed.");
       set({ loading: false, error: err.message });
     }
   },
@@ -112,6 +119,7 @@ export const useAuthStore = create((set, get) => ({
       set({ loading: false });
       return true;
     } catch (err) {
+      notifyError(err, "Registration failed.");
       set({ loading: false, error: err.message });
       return false;
     }
