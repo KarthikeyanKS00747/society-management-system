@@ -23,6 +23,11 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
 export const useProfileStore = create((set) => ({
   profile: null,
   loading: false,
@@ -50,6 +55,7 @@ export const useProfileStore = create((set) => ({
     try {
       const { profile } = await ProfileService.updateProfile(token, fields);
       set({ profile, saving: false });
+      notifySuccess("Profile updated.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to update profile.");
@@ -66,6 +72,7 @@ export const useProfileStore = create((set) => ({
     try {
       await ProfileService.updateProfile(token, { currentPassword, newPassword });
       set({ saving: false });
+      notifySuccess("Password changed successfully.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to change password.");

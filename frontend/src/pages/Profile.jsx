@@ -78,8 +78,7 @@ function Profile() {
     }
     const ok = await changePassword(pwForm.current, pwForm.next);
     if (ok) {
-      notify({ message: "Password changed successfully.", type: "success" });
-      setPwForm({ current: "", next: "", confirm: "" });
+        setPwForm({ current: "", next: "", confirm: "" });
     }
   };
 

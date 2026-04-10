@@ -8,6 +8,11 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
 export const useAnnouncementStore = create((set) => ({
   announcements: [],
   loading: false,
@@ -37,6 +42,7 @@ export const useAnnouncementStore = create((set) => ({
         announcements: [item, ...state.announcements],
         saving: false,
       }));
+      notifySuccess("Announcement posted.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to create announcement.");

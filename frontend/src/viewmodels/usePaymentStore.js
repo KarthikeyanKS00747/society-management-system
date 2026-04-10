@@ -114,6 +114,7 @@ export const usePaymentStore = create((set, get) => ({
               const updated = await PaymentService.getPayments(token);
               set({ payments: Array.isArray(updated) ? updated : [], paying: false });
 
+              notify("Payment successful.", "success");
               onSuccess?.(result.payment);
             } catch (verifyErr) {
               notify(verifyErr?.message || "Payment verification failed.");

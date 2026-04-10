@@ -8,6 +8,11 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
 export const useFacilityStore = create((set, get) => ({
   facilities: [],
   loading: false,
@@ -32,6 +37,7 @@ export const useFacilityStore = create((set, get) => ({
     try {
       const created = await FacilityService.createFacility(token, { name, capacity, isActive });
       set((state) => ({ facilities: [...state.facilities, created], saving: false }));
+      notifySuccess("Facility created.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to create facility.");
@@ -49,6 +55,7 @@ export const useFacilityStore = create((set, get) => ({
         facilities: state.facilities.map((f) => (f._id === id ? { ...f, ...updated } : f)),
         saving: false,
       }));
+      notifySuccess("Facility updated.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to update facility.");
@@ -66,6 +73,7 @@ export const useFacilityStore = create((set, get) => ({
         facilities: state.facilities.filter((f) => f._id !== id),
         saving: false,
       }));
+      notifySuccess("Facility deleted.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to delete facility.");

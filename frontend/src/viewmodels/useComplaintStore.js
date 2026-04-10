@@ -8,6 +8,11 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
 export const useComplaintStore = create((set, get) => ({
   complaints: [],
   loading: false,
@@ -32,6 +37,7 @@ export const useComplaintStore = create((set, get) => ({
     try {
       const created = await ComplaintService.createComplaint(token, { category, description, priority });
       set((state) => ({ complaints: [created, ...state.complaints], saving: false }));
+      notifySuccess("Complaint submitted.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to submit complaint.");
@@ -49,6 +55,7 @@ export const useComplaintStore = create((set, get) => ({
         complaints: state.complaints.map((c) => (c._id === id ? { ...c, ...updated } : c)),
         saving: false,
       }));
+      notifySuccess("Complaint status updated.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to update complaint.");

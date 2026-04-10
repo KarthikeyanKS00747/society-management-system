@@ -223,6 +223,7 @@ function AdminFlats() {
               <tr>
                 <th>Block</th>
                 <th>Flat No.</th>
+                <th>Society</th>
                 <th>Area</th>
                 <th>Type</th>
                 <th>Occupant</th>
@@ -235,6 +236,7 @@ function AdminFlats() {
                   <tr key={flat._id}>
                     <td>{flat.block || "—"}</td>
                     <td><strong>{flat.flatNumber}</strong></td>
+                    <td>{flat.societyName ?? "—"}</td>
                     <td>{flat.areaSqFt ? `${flat.areaSqFt} sq ft` : "—"}</td>
                     <td>{flat.occupancyType ?? "—"}</td>
                     <td>
@@ -299,7 +301,7 @@ function AdminFlats() {
                   {/* Inline Edit Row */}
                   {editingFlatId === flat._id && (
                     <tr key={`${flat._id}-edit`}>
-                      <td colSpan={6} style={{ padding: "16px 12px", background: "rgba(255,255,255,0.03)" }}>
+                      <td colSpan={7} style={{ padding: "16px 12px", background: "rgba(255,255,255,0.03)" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "12px", alignItems: "end" }}>
                           <div>
                             <label className="label">Block</label>
@@ -364,7 +366,7 @@ function AdminFlats() {
                   {/* Inline Assign Panel */}
                   {assigningFlatId === flat._id && (
                     <tr key={`${flat._id}-assign`}>
-                      <td colSpan={6} style={{ padding: "16px 12px", background: "rgba(255,255,255,0.03)" }}>
+                      <td colSpan={7} style={{ padding: "16px 12px", background: "rgba(255,255,255,0.03)" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "12px", alignItems: "end", maxWidth: 560 }}>
                           <div>
                             <label className="label">Assign Resident</label>
@@ -447,7 +449,7 @@ function ResidentFlat() {
             <StatCard label="Occupancy Type" value={flat.occupancyType ?? "—"} />
           </section>
 
-          {profile?.society && (
+          {(flat?.societyName || profile?.society) && (
             <section className="card">
               <div className="card-header">
                 <h3>Society Info</h3>
@@ -455,7 +457,7 @@ function ResidentFlat() {
               <div className="list">
                 <div className="list-item">
                   <span>Society Name</span>
-                  <span>{profile.society.name ?? "—"}</span>
+                  <span>{flat?.societyName ?? profile?.society?.name ?? "—"}</span>
                 </div>
                 <div className="list-item">
                   <span>Member Since</span>

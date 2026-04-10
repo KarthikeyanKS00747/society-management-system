@@ -42,11 +42,26 @@ function App() {
   // Inactive resident: logged in but no flat assigned yet
   if (isLoggedIn && accountInactive) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--color-bg, #f5f5f5)" }}>
-        <div className="card" style={{ maxWidth: 420, width: "100%", textAlign: "center", padding: "2.5rem" }}>
+      <div className="auth-page">
+        <div className="card auth-card" style={{ maxWidth: 460, textAlign: "center", padding: "2.5rem" }}>
+          <div style={{
+            width: 64,
+            height: 64,
+            borderRadius: "50%",
+            background: "rgba(47, 112, 223, 0.12)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+            color: "var(--text-heading)",
+            fontSize: "1.8rem",
+          }}>
+            ⏳
+          </div>
           <h2 style={{ marginBottom: "0.75rem" }}>Account Pending Activation</h2>
-          <p style={{ color: "var(--color-muted, #888)", marginBottom: "1.5rem", lineHeight: 1.6 }}>
-            Your application has been accepted. Once the admin assigns a flat to your account, you will be able to log in and access the portal.
+          <p className="auth-subtitle" style={{ marginBottom: "1.5rem", lineHeight: 1.6 }}>
+            Your application has been accepted. Once the admin assigns a flat to your account,
+            you will be able to log in and access the portal.
           </p>
           <button className="btn btn-outline" onClick={logout}>
             Logout

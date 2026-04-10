@@ -45,7 +45,6 @@ function Bookings() {
     const ok = await createBooking(form);
     if (ok) {
       setForm({ facilityId: "", date: "", startTime: "", endTime: "" });
-      notify({ message: "Booking request submitted. Awaiting admin approval.", type: "success" });
     }
   };
 

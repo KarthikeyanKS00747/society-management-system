@@ -61,7 +61,6 @@ function Complaints() {
     if (ok) {
       setForm({ category: "", customCategory: "", description: "", priority: "" });
       setShowCustom(false);
-      notify({ message: "Complaint submitted successfully.", type: "success" });
     }
   };
 

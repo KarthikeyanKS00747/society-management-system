@@ -8,6 +8,11 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
 export const useBookingStore = create((set) => ({
   bookings: [],
   loading: false,
@@ -32,6 +37,7 @@ export const useBookingStore = create((set) => ({
     try {
       const created = await BookingService.createBooking(token, { facilityId, date, startTime, endTime });
       set((state) => ({ bookings: [created, ...state.bookings], saving: false }));
+      notifySuccess("Booking request submitted.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to create booking.");
@@ -49,6 +55,7 @@ export const useBookingStore = create((set) => ({
         bookings: state.bookings.map((b) => (b._id === id ? { ...b, ...updated } : b)),
         saving: false,
       }));
+      notifySuccess("Booking approved.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to approve booking.");
@@ -66,6 +73,7 @@ export const useBookingStore = create((set) => ({
         bookings: state.bookings.map((b) => (b._id === id ? { ...b, ...updated } : b)),
         saving: false,
       }));
+      notifySuccess("Booking rejected.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to reject booking.");

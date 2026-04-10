@@ -18,6 +18,24 @@ export class FlatService {
     };
   }
 
+  static #normalizeFlat(data) {
+    if (!data) return data;
+    const flat = data.flat ?? data;
+    const societyName = data.societyName;
+    if (flat && societyName && !flat.societyName) {
+      return { ...flat, societyName };
+    }
+    return flat;
+  }
+
+  static #normalizeFlats(data) {
+    if (!data) return [];
+    const list = Array.isArray(data) ? data : Array.isArray(data.flats) ? data.flats : [];
+    const societyName = data.societyName;
+    if (!societyName) return list;
+    return list.map((flat) => (flat?.societyName ? flat : { ...flat, societyName }));
+  }
+
   // ─── Public Methods ──────────────────────────────────────────────────────────
 
   /** GET /resiflow/flats — admin: all flats with occupant; resident: own flat */
@@ -25,7 +43,8 @@ export class FlatService {
     const res = await fetch(API_ENDPOINTS.flats.list, {
       headers: FlatService.#authHeaders(token),
     });
-    return FlatService.#handleResponse(res);
+    const data = await FlatService.#handleResponse(res);
+    return FlatService.#normalizeFlats(data);
   }
 
   /** POST /resiflow/flats — admin only */
@@ -35,7 +54,8 @@ export class FlatService {
       headers: FlatService.#authHeaders(token),
       body: JSON.stringify({ flatNumber, block, areaSqFt, occupancyType }),
     });
-    return FlatService.#handleResponse(res);
+    const data = await FlatService.#handleResponse(res);
+    return FlatService.#normalizeFlat(data);
   }
 
   /** GET /resiflow/flats/unassigned-residents — admin only */
@@ -72,7 +92,8 @@ export class FlatService {
       headers: FlatService.#authHeaders(token),
       body: JSON.stringify({ block, flatNumber, areaSqFt, occupancyType }),
     });
-    return FlatService.#handleResponse(res);
+    const data = await FlatService.#handleResponse(res);
+    return FlatService.#normalizeFlat(data);
   }
 
   /** DELETE /resiflow/flats/:flatId — admin deletes a vacant flat */

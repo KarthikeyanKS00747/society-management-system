@@ -8,6 +8,11 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
 export const useMaintenanceBillStore = create((set) => ({
   bills:   [],
   loading: false,
@@ -49,6 +54,7 @@ export const useMaintenanceBillStore = create((set) => ({
         ? await MaintenanceBillService.getAllBills(t)
         : await MaintenanceBillService.getMyBills(t);
       set({ bills: Array.isArray(updated) ? updated : [], saving: false });
+      notifySuccess(result?.msg || "Bills generated.");
       return result;
     } catch (err) {
       notifyError(err, "Failed to generate bills.");

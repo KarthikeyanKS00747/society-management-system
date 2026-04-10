@@ -18,6 +18,11 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
 export const useApplicationStore = create((set, get) => ({
   applications: [],
   loading: false,
@@ -47,6 +52,7 @@ export const useApplicationStore = create((set, get) => ({
         applications: state.applications.filter((a) => a._id !== id),
         actionLoading: null,
       }));
+      notifySuccess("Application approved.");
     } catch (err) {
       notifyError(err, "Failed to accept application.");
       set({ error: err.message, actionLoading: null });
@@ -63,6 +69,7 @@ export const useApplicationStore = create((set, get) => ({
         applications: state.applications.filter((a) => a._id !== id),
         actionLoading: null,
       }));
+      notifySuccess("Application rejected.");
     } catch (err) {
       notifyError(err, "Failed to reject application.");
       set({ error: err.message, actionLoading: null });

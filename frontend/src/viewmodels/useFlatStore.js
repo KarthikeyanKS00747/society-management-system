@@ -8,6 +8,29 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
+const coerceFlat = (data) => {
+  if (!data) return data;
+  const flat = data.flat ?? data;
+  const societyName = data.societyName;
+  if (flat && societyName && !flat.societyName) {
+    return { ...flat, societyName };
+  }
+  return flat;
+};
+
+const coerceFlatList = (data) => {
+  if (!data) return [];
+  const list = Array.isArray(data) ? data : Array.isArray(data.flats) ? data.flats : [];
+  const societyName = data.societyName;
+  if (!societyName) return list;
+  return list.map((flat) => (flat?.societyName ? flat : { ...flat, societyName }));
+};
+
 export const useFlatStore = create((set, get) => ({
   // ─── State ─────────────────────────────────────────────────────────────────
   flats: [],
@@ -23,8 +46,7 @@ export const useFlatStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const data = await FlatService.getFlats(token);
-      // Backend may return { flats: [...] } or [...] directly
-      set({ flats: data.flats ?? data, loading: false });
+      set({ flats: coerceFlatList(data), loading: false });
     } catch (err) {
       notifyError(err, "Failed to load flats.");
       set({ error: err.message, loading: false });
@@ -47,11 +69,12 @@ export const useFlatStore = create((set, get) => ({
     set({ saving: true, error: null });
     try {
       const created = await FlatService.createFlat(token, flatData);
-      const newFlat = created.flat ?? created;
+      const newFlat = coerceFlat(created);
       set((state) => ({
         flats: [...state.flats, newFlat],
         saving: false,
       }));
+      notifySuccess("Flat created.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to create flat.");
@@ -69,6 +92,7 @@ export const useFlatStore = create((set, get) => ({
       await get().fetchFlats();
       await get().fetchUnassignedResidents();
       set({ saving: false });
+      notifySuccess("Flat assigned.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to assign flat.");
@@ -86,6 +110,7 @@ export const useFlatStore = create((set, get) => ({
       await get().fetchFlats();
       await get().fetchUnassignedResidents();
       set({ saving: false });
+      notifySuccess("Flat unassigned.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to unassign flat.");
@@ -99,12 +124,14 @@ export const useFlatStore = create((set, get) => ({
     set({ saving: true, error: null });
     try {
       const updated = await FlatService.updateFlat(token, flatId, fields);
+      const nextFlat = coerceFlat(updated);
       set((state) => ({
         flats: state.flats.map((f) =>
-          f._id === flatId ? { ...f, ...updated } : f
+          f._id === flatId ? { ...f, ...nextFlat } : f
         ),
         saving: false,
       }));
+      notifySuccess("Flat updated.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to update flat.");
@@ -122,6 +149,7 @@ export const useFlatStore = create((set, get) => ({
         flats: state.flats.filter((f) => f._id !== flatId),
         saving: false,
       }));
+      notifySuccess("Flat deleted.");
       return true;
     } catch (err) {
       notifyError(err, "Failed to delete flat.");

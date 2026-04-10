@@ -27,6 +27,11 @@ const notifyError = (err, fallback = "Something went wrong.") => {
   useNotificationStore.getState().notify({ message, type: "error" });
 };
 
+const notifySuccess = (message) => {
+  if (!message) return;
+  useNotificationStore.getState().notify({ message, type: "success" });
+};
+
 // ─── JWT decoder (no extra library needed) ───────────────────────────────────
 function decodeJwt(token) {
   try {
@@ -104,6 +109,7 @@ export const useAuthStore = create((set, get) => ({
       const user = decodeJwt(token);
       saveToken(token);
       set({ token, user, isLoggedIn: true, loading: false });
+      notifySuccess("Logged in successfully.");
     } catch (err) {
       notifyError(err, "Login failed.");
       set({ loading: false, error: err.message });
@@ -117,6 +123,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       await AuthService.registerSociety(formData);
       set({ loading: false });
+      notifySuccess("Registration successful.");
       return true;
     } catch (err) {
       notifyError(err, "Registration failed.");
@@ -140,6 +147,7 @@ export const useAuthStore = create((set, get) => ({
     }
     clearStorage();
     set({ token: null, user: null, isLoggedIn: false, error: null, accountInactive: false });
+    notifySuccess("Logged out successfully.");
   },
 
   // ── Utility ────────────────────────────────────────────────────────────────
